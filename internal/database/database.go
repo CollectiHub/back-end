@@ -1,10 +1,10 @@
 package database
 
 import (
+	"aya/api/resources/user"
 	"aya/internal/config"
 	"context"
 	"log"
-	"os/user"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -26,8 +26,9 @@ func New(cfg config.Config) *gorm.DB {
 	}
 
 	if cfg.Env == config.EnvDev {
-		db.AutoMigrate(&user.User{})
-		log.Println("Automigrated")
+		if err = db.AutoMigrate(&user.User{}); err != nil {
+			log.Fatalf("Failed to auto migrate: %s", err)
+		}
 	}
 
 	return db

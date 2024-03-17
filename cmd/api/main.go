@@ -17,7 +17,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      router.New(nil, db),
+		Handler:      router.New(logger, db),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
