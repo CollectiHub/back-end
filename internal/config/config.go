@@ -2,19 +2,25 @@ package config
 
 import (
 	"log"
-	"os"
-	"path"
-	"strconv"
+	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Port int
-	Env  string
-	DB   struct {
-		DSN string
-	}
+	Port       int    `mapstructure:"PORT"`
+	Env        string `mapstructure:"ENV"`
+	HostDomain string `mapstructure:"HOST_DOMAIN"`
+
+	DB_DSN string `mapstructure:"PG_CONNECTION_STRING"`
+
+	AccessTokenPrivateKey string        `mapstructure:"ACCESS_TOKEN_PRIVATE_KEY"`
+	AccessTokenPublicKey  string        `mapstructure:"ACCESS_TOKEN_PUBLIC_KEY"`
+	AccessTokenExpiresIn  time.Duration `mapstructure:"ACCESS_TOKEN_EXPIRE"`
+
+	RefreshTokenPrivateKey string        `mapstructure:"REFRESH_TOKEN_PRIVATE_KEY"`
+	RefreshTokenPublicKey  string        `mapstructure:"REFRESH_TOKEN_PUBLIC_KEY"`
+	RefreshTokenExpiresIn  time.Duration `mapstructure:"REFRESH_TOKEN_EXPIRE"`
 }
 
 const EnvDev = "development"
@@ -23,21 +29,18 @@ const EnvProd = "production"
 func New() *Config {
 	var cfg Config
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Failed to get cwd: %s", err)
+	viper.AddConfigPath(".")
+	viper.SetConfigType("env")
+	viper.SetConfigFile(".env")
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Failed to read in config: %s", err)
 	}
 
-	envPath := path.Join(cwd, ".env")
-	godotenv.Load(envPath)
-
-	cfg.Port, err = strconv.Atoi(os.Getenv("PORT"))
-	if err != nil {
-		log.Fatalf("Failed to convert port: %s", err)
+	if err := viper.Unmarshal(&cfg); err != nil {
+		log.Fatalf("Failed to unmarshal config: %s", err)
 	}
-
-	cfg.Env = os.Getenv("ENV")
-	cfg.DB.DSN = os.Getenv("PG_CONNECTION_STRING")
 
 	return &cfg
 }

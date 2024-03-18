@@ -1,10 +1,10 @@
 package main
 
 import (
-	"aya/api/router"
-	"aya/internal/config"
-	"aya/internal/database"
-	"aya/internal/util/logger"
+	"collectihub/api/router"
+	"collectihub/internal/config"
+	"collectihub/internal/database"
+	"collectihub/internal/util/logger"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,7 +17,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      router.New(logger, db),
+		Handler:      router.New(logger, db, *cfg),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,

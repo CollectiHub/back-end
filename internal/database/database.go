@@ -1,8 +1,8 @@
 package database
 
 import (
-	"aya/api/resources/user"
-	"aya/internal/config"
+	"collectihub/api/resources/user"
+	"collectihub/internal/config"
 	"context"
 	"log"
 	"time"
@@ -12,7 +12,7 @@ import (
 )
 
 func New(cfg config.Config) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(cfg.DB.DSN), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(cfg.DB_DSN), &gorm.Config{TranslateError: false})
 	if err != nil {
 		log.Fatalf("Failed to open database: %s", err)
 	}

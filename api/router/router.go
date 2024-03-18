@@ -1,20 +1,25 @@
 package router
 
 import (
-	"aya/api/resources/user"
+	"collectihub/api/resources/user"
+	"collectihub/internal/config"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
-func New(l *zerolog.Logger, db *gorm.DB) *chi.Mux {
+func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	r := chi.NewRouter()
 	api := chi.NewRouter()
+	// auth := middleware.NewAuthenticator(cfg, db)
 
 	// Users
-	userAPI := user.New(l, db)
-	api.Post("/users", userAPI.SignUp)
+	userAPI := user.New(l, db, cfg)
+	api.Post("/auth/register", userAPI.SignUp)
+	api.Post("/auth/login", userAPI.SignIn)
+	api.Post("/auth/refresh-token", userAPI.RefreshAccessToken)
+	api.Post("/auth/logout", userAPI.Logout)
 
 	r.Mount("/v1", api)
 

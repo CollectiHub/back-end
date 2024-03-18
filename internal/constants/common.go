@@ -1,3 +1,10 @@
 package constants
 
-const DataWrapper = "data"
+// Cookie names
+const AccessTokenCookie = "access_token"
+const RefreshTokenCookie = "refresh_token"
+
+// Context keys
+type ContextKey string
+
+const CurrentUserContext = ContextKey("currentUser")

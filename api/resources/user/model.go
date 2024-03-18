@@ -1,6 +1,9 @@
 package user
 
 import (
+	"collectihub/internal/constants"
+	"errors"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,7 +14,7 @@ type User struct {
 	Username  string    `gorm:"type:varchar(32);uniqueIndex;not null"`
 	Email     string    `gorm:"type:varchar(64);uniqueIndex;not null"`
 	Password  string    `gorm:"type:varchar(256);not null"`
-	Role      string    `gorm:"type:varchar(32);not null"`
+	Role      string    `gorm:"type:varchar(32);default:'user';not null"`
 	Verified  bool      `gorm:"type:boolean;default:false"`
 	CreatedAt time.Time `gorm:"not null"`
 	UpdatedAt time.Time `gorm:"not null"`
@@ -34,4 +37,13 @@ type GetUserResponse struct {
 	Email    string    `json:"email"`
 	Role     string    `json:"role"`
 	Verified bool      `json:"verified"`
+}
+
+func GetUserFromRequestContext(r *http.Request) (*User, error) {
+	cur, ok := r.Context().Value(constants.CurrentUserContext).(User)
+	if !ok {
+		return nil, errors.New("user not found in context")
+	}
+
+	return &cur, nil
 }

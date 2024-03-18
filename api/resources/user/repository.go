@@ -1,6 +1,9 @@
 package user
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type Repository struct {
 	db *gorm.DB
@@ -11,9 +14,18 @@ func NewRepository(db *gorm.DB) *Repository {
 }
 
 func (r *Repository) Create(user *User) error {
-	if err := r.db.Create(&user).Error; err != nil {
+	return r.db.Create(&user).Error
+}
+
+func (r *Repository) FindOneByEmail(user *User, email string) error {
+	return r.db.First(&user, &User{Email: email}).Error
+}
+
+func (r *Repository) FindOneById(user *User, id string) error {
+	uuid, err := uuid.Parse(id)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return r.db.First(&user, &User{ID: uuid}).Error
 }
