@@ -35,25 +35,25 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 		} else if cookie_err == nil {
 			access_token = cookie.Value
 		} else {
-			json.ErrorJSON(w, http.StatusUnauthorized, "You are not logged in", nil)
+			json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
 			return
 		}
 
 		sub, err := util.ValidateToken(access_token, a.config.AccessTokenPublicKey)
 		if err != nil {
-			json.ErrorJSON(w, http.StatusUnauthorized, "Token is not valid", err)
+			json.ErrorJSON(w, http.StatusUnauthorized, constants.TokenIsNotValidErrorMessage, err)
 			return
 		}
 
 		user_id, ok := sub.(string)
 		if !ok {
-			json.ErrorJSON(w, http.StatusBadRequest, "Unexpected error", nil)
+			json.ErrorJSON(w, http.StatusBadRequest, constants.UnexpectedErrorMessage, nil)
 			return
 		}
 
 		var user models.User
 		if err = a.db.First(&user, "id = ?", user_id).Error; err != nil {
-			json.ErrorJSON(w, http.StatusForbidden, "User not found", nil)
+			json.ErrorJSON(w, http.StatusForbidden, constants.NotFoundMessage("User"), nil)
 			return
 		}
 

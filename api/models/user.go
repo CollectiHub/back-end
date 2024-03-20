@@ -20,15 +20,25 @@ type User struct {
 	UpdatedAt time.Time `gorm:"not null"`
 }
 
-type SignUpInput struct {
-	Username string `json:"username" validate:"required"`
-	Email    string `json:"email" validate:"required"`
+type SignUpRequest struct {
+	Username string `json:"username" validate:"required,min=6"`
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"` // TODO: update when policy is ready
 }
 
-type SignInInput struct {
+type SignInRequest struct {
 	Email    string `json:"email" validate:"required"`
 	Password string `json:"password" validate:"required"`
+}
+
+type UpdateUserRequest struct {
+	Username string `json:"username" validate:"omitempty,min=6"`
+	Email    string `json:"email" validate:"omitempty,email"`
+}
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" validate:"required,min=8"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
 }
 
 type GetUserResponse struct {
@@ -37,6 +47,10 @@ type GetUserResponse struct {
 	Email    string    `json:"email"`
 	Role     string    `json:"role"`
 	Verified bool      `json:"verified"`
+}
+
+type AccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
 }
 
 func GetUserFromRequestContext(r *http.Request) (*User, error) {

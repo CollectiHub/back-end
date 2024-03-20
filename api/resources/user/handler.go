@@ -9,7 +9,6 @@ import (
 	"collectihub/internal/util/json"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
@@ -27,21 +26,17 @@ func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
 }
 
 func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
-	payload := &models.SignUpInput{}
+	payload := &models.SignUpRequest{}
 	json.DecodeJSON(*r, payload)
 
-	validate := validator.New()
-	err := validate.Struct(payload)
-	if err != nil {
-		json.ValidatorErrorJSON(w, err)
-		a.logger.Error().Err(err).Msg(constants.DefaultJsonValidationErrorMessage)
+	if err := json.ValidateStruct(w, payload); err != nil {
 		return
 	}
 
 	hashedPassword, err := util.HashPassword(payload.Password)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "Error during password hashing", err)
-		a.logger.Error().Err(err).Msg("Error during password hashing")
+		json.ErrorJSON(w, http.StatusBadRequest, constants.PasswordHashingErrorMessage, err)
+		a.logger.Error().Err(err).Msgf("Error during password hashing for user (%s)", payload.Email)
 		return
 	}
 
@@ -54,7 +49,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	err = a.userRepository.Create(&newUser)
 	if err != nil {
 		json.DatabaseErrorJSON(w, err)
-		a.logger.Error().Err(err).Msg("Error during adding new user to database")
+		a.logger.Error().Err(err).Msgf("Database error during user insertion (%v)", newUser)
 		return
 	}
 
@@ -69,40 +64,34 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
-	payload := &models.SignInInput{}
+	payload := &models.SignInRequest{}
 	json.DecodeJSON(*r, payload)
 
-	validate := validator.New()
-	err := validate.Struct(payload)
-	if err != nil {
-		json.ValidatorErrorJSON(w, err)
-		a.logger.Error().Err(err).Msg(constants.DefaultJsonValidationErrorMessage)
+	if err := json.ValidateStruct(w, payload); err != nil {
 		return
 	}
 
 	var user models.User
-	if err = a.userRepository.FindOneByEmail(&user, payload.Email); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.UserNotFound, nil)
-		a.logger.Error().Err(err).Msgf("User was not found during signing in: %s", payload.Email)
+	if err := a.userRepository.FindOneByEmail(&user, payload.Email); err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.NotFoundMessage("User"), nil)
 		return
 	}
 
-	if err = util.VerifyPassword(user.Password, payload.Password); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "incorrect password", nil)
-		a.logger.Error().Err(err).Msgf("User (%s) failed to sign in due to incorrect password", user.ID)
+	if err := util.VerifyPassword(user.Password, payload.Password); err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectPasswordErrorMessage, nil)
 		return
 	}
 
 	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "Error during access token generation", err)
+		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
 		a.logger.Error().Err(err).Msg("Error during acccess token generation")
 		return
 	}
 
 	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user.ID, a.config.RefreshTokenPrivateKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "Error during refresh token generation", err)
+		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
 		a.logger.Error().Err(err).Msg("Error during refresh token generation")
 		return
 	}
@@ -132,39 +121,37 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, map[string]string{
-		"access_token": accessToken,
-	})
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.AccessTokenResponse{AccessToken: accessToken})
 }
 
 func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	refreshTokenFromCookie, err := r.Cookie(constants.RefreshTokenCookie)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, "could not refresh token", nil)
+		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
 		return
 	}
 
 	sub, err := util.ValidateToken(refreshTokenFromCookie.Value, a.config.RefreshTokenPublicKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, "could not refresh token", nil)
+		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
 		return
 	}
 
 	userID, ok := sub.(string)
 	if !ok {
-		json.ErrorJSON(w, http.StatusForbidden, "could not refresh token", nil)
+		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
 		return
 	}
 
 	var user models.User
 	if err = a.userRepository.FindOneById(&user, userID); err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, "could not refresh token", nil)
+		json.ErrorJSON(w, http.StatusForbidden, constants.NotFoundMessage("User"), nil)
 		return
 	}
 
 	var refreshTokenFromDB models.RefreshToken
 	if err = a.refreshTokenRepository.FindOne(&refreshTokenFromDB, &models.RefreshToken{Token: refreshTokenFromCookie.Value, UserID: user.ID}); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "could not find token in db", nil)
+		json.ErrorJSON(w, http.StatusBadRequest, constants.NotFoundMessage("Token"), nil)
 		return
 	}
 
@@ -174,11 +161,11 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	// when access token expires.
 	if refreshTokenFromDB.Used {
 		if err = a.refreshTokenRepository.DeleteAllByUser(user.ID); err != nil {
-			json.ErrorJSON(w, http.StatusBadRequest, "database error", nil)
+			json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
 			return
 		}
 
-		json.ErrorJSON(w, http.StatusForbidden, "malicious activity detected, token were wiped from database, you need to log in again", nil)
+		json.ErrorJSON(w, http.StatusForbidden, constants.MaliciousActivityErrorMessage, nil)
 		return
 	}
 
@@ -186,19 +173,20 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	// set of tokens.
 	a.logger.Info().Msgf("%s", refreshTokenFromDB.ID)
 	if err = a.refreshTokenRepository.Update(&refreshTokenFromDB, &models.RefreshToken{Used: true}); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "database error", nil)
+		json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
 		return
 	}
 
-	access_token, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
+	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, "could not refresh token", nil)
+		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
+		a.logger.Error().Err(err).Msg("Error during access token generation")
 		return
 	}
 
 	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user.ID, a.config.RefreshTokenPrivateKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "Error during refresh token generation", err)
+		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
 		a.logger.Error().Err(err).Msg("Error during refresh token generation")
 		return
 	}
@@ -210,7 +198,7 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     constants.AccessTokenCookie,
-		Value:    access_token,
+		Value:    accessToken,
 		MaxAge:   int(a.config.AccessTokenExpiresIn.Seconds()),
 		Path:     "/",
 		Domain:   a.config.HostDomain,
@@ -228,9 +216,7 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	json.WriteJSON(w, http.StatusOK, "Tokens were refreshed successfully", map[string]string{
-		"access_token": access_token,
-	})
+	json.WriteJSON(w, http.StatusOK, constants.SuccessfulTokenRefreshMessage, models.AccessTokenResponse{AccessToken: accessToken})
 }
 
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
@@ -260,7 +246,7 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, "not authed", nil)
+		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
 		return
 	}
 
@@ -271,4 +257,74 @@ func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 		Role:     user.Role,
 		Verified: user.Verified,
 	})
+}
+
+func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	user, err := models.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		return
+	}
+
+	payload := &models.ChangePasswordRequest{}
+	json.DecodeJSON(*r, payload)
+
+	if err := json.ValidateStruct(w, payload); err != nil {
+		return
+	}
+
+	if err = util.VerifyPassword(user.Password, payload.OldPassword); err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectPasswordErrorMessage, nil)
+		return
+	}
+
+	hashedPassword, err := util.HashPassword(payload.NewPassword)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.PasswordHashingErrorMessage, nil)
+		return
+	}
+
+	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: hashedPassword}); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+}
+
+func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	user, err := models.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		return
+	}
+
+	payload := &models.UpdateUserRequest{}
+	json.DecodeJSON(*r, payload)
+
+	if err := json.ValidateStruct(w, payload); err != nil {
+		return
+	}
+
+	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Username: payload.Username, Email: payload.Email}); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+}
+
+func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	user, err := models.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		return
+	}
+
+	if err = a.userRepository.Delete(user.ID); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }

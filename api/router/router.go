@@ -21,7 +21,11 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	api.Post("/auth/login", userAPI.SignIn)
 	api.Post("/auth/refresh-token", userAPI.RefreshAccessToken)
 	api.Post("/auth/logout", userAPI.Logout)
+
 	api.Get("/users/me", auth.Authenticate(userAPI.GetMe))
+	api.Patch("/users", auth.Authenticate(userAPI.UpdateUser))
+	api.Patch("/users/change-password", auth.Authenticate(userAPI.ChangePassword))
+	api.Delete("/users", auth.Authenticate(userAPI.DeleteUser))
 
 	r.Mount("/v1", api)
 

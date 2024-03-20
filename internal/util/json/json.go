@@ -1,6 +1,7 @@
 package json
 
 import (
+	"collectihub/internal/constants"
 	"collectihub/internal/util"
 	"collectihub/types"
 	"encoding/json"
@@ -53,7 +54,7 @@ func DecodeJSON(r http.Request, data interface{}) error {
 func DatabaseErrorJSON(w http.ResponseWriter, err error) {
 	pqErr, ok := err.(*pgconn.PgError)
 	if !ok {
-		ErrorJSON(w, http.StatusBadRequest, "Unexpected database error occured", nil)
+		ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
 	}
 
 	switch pqErr.Code {
@@ -75,11 +76,24 @@ func ValidatorErrorJSON(w http.ResponseWriter, err error) {
 				messages[i] = fmt.Sprintf("%s is a required field", err.Field())
 			case "min":
 				messages[i] = fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())
+			case "email":
+				messages[i] = fmt.Sprintf("%s must be email", err.Field())
 			default:
 				messages[i] = fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())
 			}
 		}
 
-		ErrorJSON(w, http.StatusBadRequest, "Validation error", messages)
+		ErrorJSON(w, http.StatusBadRequest, constants.JsonValidationErrorMessage, messages)
 	}
+}
+
+func ValidateStruct(w http.ResponseWriter, payload interface{}) error {
+	validate := validator.New()
+	err := validate.Struct(payload)
+	if err != nil {
+		ValidatorErrorJSON(w, err)
+		return err
+	}
+
+	return nil
 }
