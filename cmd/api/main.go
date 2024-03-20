@@ -16,7 +16,7 @@ func main() {
 	db := database.New(*cfg)
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Addr:         fmt.Sprintf("localhost:%d", cfg.Port),
 		Handler:      router.New(logger, db, *cfg),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,

@@ -14,7 +14,7 @@ func New(isDebug bool) *zerolog.Logger {
 	}
 
 	zerolog.SetGlobalLevel(logLevel)
-	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger().Output(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	return &logger
 }

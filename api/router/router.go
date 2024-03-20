@@ -1,6 +1,7 @@
 package router
 
 import (
+	"collectihub/api/middleware"
 	"collectihub/api/resources/user"
 	"collectihub/internal/config"
 
@@ -12,7 +13,7 @@ import (
 func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	r := chi.NewRouter()
 	api := chi.NewRouter()
-	// auth := middleware.NewAuthenticator(cfg, db)
+	auth := middleware.NewAuthenticator(cfg, db)
 
 	// Users
 	userAPI := user.New(l, db, cfg)
@@ -20,6 +21,7 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	api.Post("/auth/login", userAPI.SignIn)
 	api.Post("/auth/refresh-token", userAPI.RefreshAccessToken)
 	api.Post("/auth/logout", userAPI.Logout)
+	api.Get("/users/me", auth.Authenticate(userAPI.GetMe))
 
 	r.Mount("/v1", api)
 

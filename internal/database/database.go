@@ -1,7 +1,7 @@
 package database
 
 import (
-	"collectihub/api/resources/user"
+	"collectihub/api/models"
 	"collectihub/internal/config"
 	"context"
 	"log"
@@ -26,8 +26,15 @@ func New(cfg config.Config) *gorm.DB {
 	}
 
 	if cfg.Env == config.EnvDev {
-		if err = db.AutoMigrate(&user.User{}); err != nil {
-			log.Fatalf("Failed to auto migrate: %s", err)
+		migration_models := []interface{}{
+			&models.User{},
+			&models.RefreshToken{},
+		}
+
+		for i := 0; i < len(migration_models); i++ {
+			if err = db.AutoMigrate(migration_models[i]); err != nil {
+				log.Fatalf("Failed to auto migrate: %s", err)
+			}
 		}
 	}
 

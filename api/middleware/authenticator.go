@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"collectihub/api/resources/user"
+	"collectihub/api/models"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
 	"collectihub/internal/util"
@@ -51,7 +51,7 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		var user user.User
+		var user models.User
 		if err = a.db.First(&user, "id = ?", user_id).Error; err != nil {
 			json.ErrorJSON(w, http.StatusForbidden, "User not found", nil)
 			return
