@@ -3,10 +3,15 @@ package user
 import (
 	"collectihub/api/models"
 	refreshtoken "collectihub/api/resources/refresh-token"
+	"collectihub/internal/auth"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
 	"collectihub/internal/util"
 	"collectihub/internal/util/json"
+	"context"
+	jsonLib "encoding/json"
+	"errors"
+	"io"
 	"net/http"
 
 	"github.com/rs/zerolog"
@@ -17,12 +22,13 @@ type API struct {
 	logger         *zerolog.Logger
 	userRepository *Repository
 	config         config.Config
+	oauth          auth.OAuthConfig
 
 	refreshTokenRepository *refreshtoken.Repository
 }
 
 func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
-	return &API{logger, NewRepository(db), cfg, refreshtoken.NewRepository(db)}
+	return &API{logger, NewRepository(db), cfg, auth.NewOAuth(cfg), refreshtoken.NewRepository(db)}
 }
 
 func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +69,72 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (a *API) GoogleLogIn(w http.ResponseWriter, r *http.Request) {
+	url := a.oauth.GoogleLoginConfig.AuthCodeURL(a.config.GoogleState)
+
+	http.Redirect(w, r, url, http.StatusSeeOther)
+}
+
+func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
+	if state := r.URL.Query().Get("state"); state != a.config.GoogleState {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectOAuthStateErrorMessage, nil)
+		return
+	}
+
+	code := r.URL.Query().Get("code")
+
+	token, err := a.oauth.GoogleLoginConfig.Exchange(context.Background(), code)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.OAuthExchangeErrorMessage, nil)
+		return
+	}
+
+	res, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.OAuthUserDataFetchErrorMessage, nil)
+		return
+	}
+
+	userData, err := io.ReadAll(res.Body)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.UserDataReadingErrorMessage, nil)
+		return
+	}
+
+	data := &models.GoogleUserData{}
+	if err = jsonLib.Unmarshal(userData, &data); err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.JsonValidationErrorMessage, nil)
+		return
+	}
+
+	var foundUser models.User
+	if err = a.userRepository.FindOne(&foundUser, models.User{OAuthProvider: "google", OAuthIndentity: data.Email}); err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			json.DatabaseErrorJSON(w, err)
+			return
+		}
+	}
+
+	// register user if account does not exist yet
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		user := models.User{
+			OAuthProvider:  "google",
+			OAuthIndentity: data.Email,
+			Username:       util.GenerateRandomString(10),
+		}
+
+		if err = a.userRepository.Create(&user); err != nil {
+			json.DatabaseErrorJSON(w, err)
+			return
+		}
+
+		a.generateUserTokenPair(w, user, true, true)
+		return
+	}
+
+	a.generateUserTokenPair(w, foundUser, true, true)
+}
+
 func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	payload := &models.SignInRequest{}
 	json.DecodeJSON(*r, payload)
@@ -82,46 +154,7 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
-	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
-		a.logger.Error().Err(err).Msg("Error during acccess token generation")
-		return
-	}
-
-	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user.ID, a.config.RefreshTokenPrivateKey)
-	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
-		a.logger.Error().Err(err).Msg("Error during refresh token generation")
-		return
-	}
-
-	a.refreshTokenRepository.Create(&models.RefreshToken{
-		Token: refreshToken,
-		User:  user,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     constants.AccessTokenCookie,
-		Value:    accessToken,
-		MaxAge:   int(a.config.AccessTokenExpiresIn.Seconds()),
-		Path:     "/",
-		Domain:   a.config.HostDomain,
-		Secure:   false,
-		HttpOnly: true,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     constants.RefreshTokenCookie,
-		Value:    refreshToken,
-		MaxAge:   int(a.config.RefreshTokenExpiresIn.Seconds()),
-		Path:     "/",
-		Domain:   a.config.HostDomain,
-		Secure:   false,
-		HttpOnly: true,
-	})
-
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.AccessTokenResponse{AccessToken: accessToken})
+	a.generateUserTokenPair(w, user, true, true)
 }
 
 func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
@@ -171,52 +204,12 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 
 	// If token was not used before, we mark it as used and give the user new
 	// set of tokens.
-	a.logger.Info().Msgf("%s", refreshTokenFromDB.ID)
 	if err = a.refreshTokenRepository.Update(&refreshTokenFromDB, &models.RefreshToken{Used: true}); err != nil {
 		json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
 		return
 	}
 
-	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
-	if err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
-		a.logger.Error().Err(err).Msg("Error during access token generation")
-		return
-	}
-
-	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user.ID, a.config.RefreshTokenPrivateKey)
-	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
-		a.logger.Error().Err(err).Msg("Error during refresh token generation")
-		return
-	}
-
-	a.refreshTokenRepository.Create(&models.RefreshToken{
-		Token: refreshToken,
-		User:  user,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     constants.AccessTokenCookie,
-		Value:    accessToken,
-		MaxAge:   int(a.config.AccessTokenExpiresIn.Seconds()),
-		Path:     "/",
-		Domain:   a.config.HostDomain,
-		Secure:   false,
-		HttpOnly: true,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     constants.RefreshTokenCookie,
-		Value:    refreshToken,
-		MaxAge:   int(a.config.RefreshTokenExpiresIn.Seconds()),
-		Path:     "/",
-		Domain:   a.config.HostDomain,
-		Secure:   false,
-		HttpOnly: true,
-	})
-
-	json.WriteJSON(w, http.StatusOK, constants.SuccessfulTokenRefreshMessage, models.AccessTokenResponse{AccessToken: accessToken})
+	a.generateUserTokenPair(w, user, true, true)
 }
 
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
@@ -327,4 +320,49 @@ func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+}
+
+func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, setCookies bool, writeResponse bool) {
+	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
+		return
+	}
+
+	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user.ID, a.config.RefreshTokenPrivateKey)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
+		return
+	}
+
+	a.refreshTokenRepository.Create(&models.RefreshToken{
+		Token: refreshToken,
+		User:  user,
+	})
+
+	if setCookies {
+		http.SetCookie(w, &http.Cookie{
+			Name:     constants.AccessTokenCookie,
+			Value:    accessToken,
+			MaxAge:   int(a.config.AccessTokenExpiresIn.Seconds()),
+			Path:     "/",
+			Domain:   a.config.HostDomain,
+			Secure:   false,
+			HttpOnly: true,
+		})
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     constants.RefreshTokenCookie,
+			Value:    refreshToken,
+			MaxAge:   int(a.config.RefreshTokenExpiresIn.Seconds()),
+			Path:     "/",
+			Domain:   a.config.HostDomain,
+			Secure:   false,
+			HttpOnly: true,
+		})
+	}
+
+	if writeResponse {
+		json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.AccessTokenResponse{AccessToken: accessToken})
+	}
 }

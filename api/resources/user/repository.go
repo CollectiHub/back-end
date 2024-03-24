@@ -36,6 +36,10 @@ func (r *Repository) FindOneById(user *models.User, id string) error {
 	return r.db.First(&user, &models.User{ID: uuid}).Error
 }
 
+func (r *Repository) FindOne(dst *models.User, find models.User) error {
+	return r.db.First(&dst, find).Error
+}
+
 func (r *Repository) Delete(userId uuid.UUID) error {
 	return r.db.Delete(&models.User{}, &models.User{ID: userId}).Error
 }

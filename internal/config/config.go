@@ -11,6 +11,7 @@ type Config struct {
 	Port       int    `mapstructure:"PORT"`
 	Env        string `mapstructure:"ENV"`
 	HostDomain string `mapstructure:"HOST_DOMAIN"`
+	BaseUrl    string `mapstructure:"BASE_URL"`
 
 	DB_DSN string `mapstructure:"PG_CONNECTION_STRING"`
 
@@ -21,6 +22,10 @@ type Config struct {
 	RefreshTokenPrivateKey string        `mapstructure:"REFRESH_TOKEN_PRIVATE_KEY"`
 	RefreshTokenPublicKey  string        `mapstructure:"REFRESH_TOKEN_PUBLIC_KEY"`
 	RefreshTokenExpiresIn  time.Duration `mapstructure:"REFRESH_TOKEN_EXPIRE"`
+
+	GoogleClientId     string `mapstructure:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
+	GoogleState        string `mapstructure:"GOOGLE_STATE"`
 }
 
 const EnvDev = "development"

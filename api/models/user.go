@@ -10,14 +10,16 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-	Username  string    `gorm:"type:varchar(32);uniqueIndex;not null"`
-	Email     string    `gorm:"type:varchar(64);uniqueIndex;not null"`
-	Password  string    `gorm:"type:varchar(256);not null"`
-	Role      string    `gorm:"type:varchar(32);default:'user';not null"`
-	Verified  bool      `gorm:"type:boolean;default:false"`
-	CreatedAt time.Time `gorm:"not null"`
-	UpdatedAt time.Time `gorm:"not null"`
+	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
+	Username       string    `gorm:"type:varchar(32);uniqueIndex;not null"`
+	Email          string    `gorm:"type:varchar(64);uniqueIndex"`
+	Password       string    `gorm:"type:varchar(256);not null"`
+	OAuthProvider  string    `gorm:"type:varchar(32)"`
+	OAuthIndentity string    `gorm:"type:varchar(64)"`
+	Role           string    `gorm:"type:varchar(32);default:'user';not null"`
+	Verified       bool      `gorm:"type:boolean;default:false"`
+	CreatedAt      time.Time `gorm:"not null"`
+	UpdatedAt      time.Time `gorm:"not null"`
 }
 
 type SignUpRequest struct {
@@ -51,6 +53,24 @@ type GetUserResponse struct {
 
 type AccessTokenResponse struct {
 	AccessToken string `json:"access_token"`
+}
+
+// "id": "111243771685272064005",
+// "email": "skillaut@gmail.com",
+// "verified_email": true,
+// "name": "Andrii",
+// "given_name": "Andrii",
+// "picture": "https://lh3.googleusercontent.com/a/ACg8ocLjwYpQ8-YGEiPKwClrKobn7LzEyjpYRHMIRusOqy0fA-8=s96-c",
+// "locale": "uk"
+
+type GoogleUserData struct {
+	Id            string `json:"id"`
+	Email         string `json:"email"`
+	VerifiedEmail bool   `json:"verified_email"`
+	Name          string `json:"name"`
+	GivenName     string `json:"given_name"`
+	Picture       string `json:"picture"`
+	Locale        string `json:"locale"`
 }
 
 func GetUserFromRequestContext(r *http.Request) (*User, error) {
