@@ -157,7 +157,12 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	if err := a.userRepository.FindOneByEmail(&user, payload.Email); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.NotFoundMessage("User"), nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+		} else {
+			json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
+		}
+
 		return
 	}
 
