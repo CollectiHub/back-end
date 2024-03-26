@@ -31,6 +31,18 @@ func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
 	return &API{logger, NewRepository(db), cfg, auth.NewOAuth(cfg), refreshtoken.NewRepository(db)}
 }
 
+// SignUp godoc
+//
+//	@Summary		Sign up
+//	@Description	Serves as registration endpoints for new users creation.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.SignUpRequest	true	"sign up body"
+//	@Success		201		{object}	types.SuccessResponse{data=models.GetUserResponse}
+//	@Failure		400		{object}	types.ErrorResponse "Validation error; Password hashing error; Unexpected database error;"
+//	@Failure		409		{object}	types.ErrorResponse "Username of email in from request is already taken"
+//	@Router			/auth/register [post]
 func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	payload := &models.SignUpRequest{}
 	json.DecodeJSON(*r, payload)
@@ -323,13 +335,13 @@ func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, setCookies bool, writeResponse bool) {
-	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user.ID, a.config.AccessTokenPrivateKey)
+	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user, a.config.AccessTokenPrivateKey)
 	if err != nil {
 		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
 		return
 	}
 
-	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user.ID, a.config.RefreshTokenPrivateKey)
+	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user, a.config.RefreshTokenPrivateKey)
 	if err != nil {
 		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
 		return

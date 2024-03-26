@@ -1,6 +1,7 @@
 package util
 
 import (
+	"collectihub/api/models"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func CreateToken(ttl time.Duration, payload interface{}, privateKey string) (string, error) {
+func CreateToken(ttl time.Duration, payload models.User, privateKey string) (string, error) {
 	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
 	if err != nil {
 		return "", fmt.Errorf("could not decode key: %s", err)
@@ -22,10 +23,18 @@ func CreateToken(ttl time.Duration, payload interface{}, privateKey string) (str
 	now := time.Now().UTC()
 
 	claims := make(jwt.MapClaims)
-	claims["sub"] = payload
+
+	claims["sub"] = payload.ID.String()
 	claims["exp"] = now.Add(ttl).Unix()
 	claims["iat"] = now.Unix()
 	claims["nbf"] = now.Unix()
+
+	claims["username"] = payload.Username
+	claims["email"] = payload.Email
+	claims["verified"] = payload.Verified
+	claims["oauth_provider"] = payload.OAuthProvider
+	claims["oauth_identity"] = payload.OAuthIndentity
+	claims["role"] = payload.Role
 
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(key)
 	if err != nil {

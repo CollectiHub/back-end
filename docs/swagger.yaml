@@ -1,0 +1,115 @@
+basePath: /api/v1
+definitions:
+  models.GetUserResponse:
+    properties:
+      email:
+        example: realhokage@gmail.com
+        type: string
+      id:
+        example: 3c1e3b82-3a29-4cc0-a4b2-4e7c4ac58052
+        format: uuid
+        type: string
+      role:
+        example: user
+        type: string
+      username:
+        example: realhokage
+        type: string
+      verified:
+        example: true
+        type: boolean
+    type: object
+  models.SignUpRequest:
+    properties:
+      email:
+        example: realnaruto@gmail.com
+        type: string
+      password:
+        description: 'TODO: update when password is ready'
+        example: k4kash1sense1
+        minLength: 8
+        type: string
+      username:
+        example: real_naruto
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  types.ErrorResponse:
+    properties:
+      errors:
+        items:
+          $ref: '#/definitions/types.ErrorResponseElement'
+        type: array
+      message:
+        description: messsage describing an error
+        type: string
+    type: object
+  types.ErrorResponseElement:
+    properties:
+      detail:
+        description: detail of field's error, if error is unknown, this field will
+          be "" (empty string)
+        type: string
+      field:
+        description: problematic field on which error occured, if error has no specific
+          errored field (in case of general error) this field will be "" (empty string)
+        type: string
+    type: object
+  types.SuccessResponse:
+    properties:
+      data: {}
+      message:
+        example: Success!
+        type: string
+    type: object
+host: localhost:4000
+info:
+  contact:
+    email: ka1tzyu@gmail.com
+    name: Back-end engineer
+  description: This API documentation describes endpoints and models you will face
+    with during interaction with CollectiHub APIs
+  title: CollectiHub API
+  version: "1.0"
+paths:
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Serves as registration endpoints for new users creation.
+      parameters:
+      - description: sign up body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.GetUserResponse'
+              type: object
+        "400":
+          description: Validation error; Password hashing error; Unexpected database
+            error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "409":
+          description: Username of email in from request is already taken
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Sign up
+      tags:
+      - auth
+swagger: "2.0"

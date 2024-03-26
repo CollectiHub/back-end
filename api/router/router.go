@@ -4,9 +4,13 @@ import (
 	"collectihub/api/middleware"
 	"collectihub/api/resources/user"
 	"collectihub/internal/config"
+	"fmt"
+
+	_ "collectihub/docs"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +35,11 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	api.Delete("/users", auth.Authenticate(userAPI.DeleteUser))
 
 	r.Mount("/api/v1", api)
+
+	// Swagger
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL(fmt.Sprintf("%s/swagger/doc.json", cfg.BaseUrl)),
+	))
 
 	return r
 }

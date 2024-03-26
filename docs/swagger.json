@@ -1,0 +1,165 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This API documentation describes endpoints and models you will face with during interaction with CollectiHub APIs",
+        "title": "CollectiHub API",
+        "contact": {
+            "name": "Back-end engineer",
+            "email": "ka1tzyu@gmail.com"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:4000",
+    "basePath": "/api/v1",
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "description": "Serves as registration endpoints for new users creation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Sign up",
+                "parameters": [
+                    {
+                        "description": "sign up body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SignUpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.GetUserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error; Password hashing error; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Username of email in from request is already taken",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.GetUserResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "realhokage@gmail.com"
+                },
+                "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "3c1e3b82-3a29-4cc0-a4b2-4e7c4ac58052"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "user"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "realhokage"
+                },
+                "verified": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "models.SignUpRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "realnaruto@gmail.com"
+                },
+                "password": {
+                    "description": "TODO: update when password is ready",
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "k4kash1sense1"
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "real_naruto"
+                }
+            }
+        },
+        "types.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ErrorResponseElement"
+                    }
+                },
+                "message": {
+                    "description": "messsage describing an error",
+                    "type": "string"
+                }
+            }
+        },
+        "types.ErrorResponseElement": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "description": "detail of field's error, if error is unknown, this field will be \"\" (empty string)",
+                    "type": "string"
+                },
+                "field": {
+                    "description": "problematic field on which error occured, if error has no specific errored field (in case of general error) this field will be \"\" (empty string)",
+                    "type": "string"
+                }
+            }
+        },
+        "types.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Success!"
+                }
+            }
+        }
+    }
+}

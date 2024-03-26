@@ -23,32 +23,32 @@ type User struct {
 }
 
 type SignUpRequest struct {
-	Username string `json:"username" validate:"required,min=6"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"` // TODO: update when policy is ready
+	Username string `json:"username" example:"real_naruto" validate:"required,min=6"`
+	Email    string `json:"email" example:"realnaruto@gmail.com" validate:"required,email"`
+	Password string `json:"password" example:"k4kash1sense1" validate:"required,min=8"` // TODO: update when password is ready
 }
 
 type SignInRequest struct {
-	Email    string `json:"email" validate:"required"`
-	Password string `json:"password" validate:"required"`
+	Email    string `json:"email" example:"realnaruto@gmail.com" validate:"required"`
+	Password string `json:"password" example:"k4kash1sense1" validate:"required"`
 }
 
 type UpdateUserRequest struct {
-	Username string `json:"username" validate:"omitempty,min=6"`
-	Email    string `json:"email" validate:"omitempty,email"`
+	Username string `json:"username" example:"realhokage" validate:"omitempty,min=6"`
+	Email    string `json:"email" example:"realhokage@gmail.com" validate:"omitempty,email"`
 }
 
 type ChangePasswordRequest struct {
-	OldPassword string `json:"old_password" validate:"required,min=8"`
-	NewPassword string `json:"new_password" validate:"required,min=8"`
+	OldPassword string `json:"old_password" example:"k4kash1sense1" validate:"required,min=8"`
+	NewPassword string `json:"new_password" example:"re41h0k4ge" validate:"required,min=8"`
 }
 
 type GetUserResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
-	Role     string    `json:"role"`
-	Verified bool      `json:"verified"`
+	ID       uuid.UUID `json:"id" example:"3c1e3b82-3a29-4cc0-a4b2-4e7c4ac58052" format:"uuid"`
+	Username string    `json:"username" example:"realhokage"`
+	Email    string    `json:"email" example:"realhokage@gmail.com"`
+	Role     string    `json:"role" example:"user"`
+	Verified bool      `json:"verified" example:"true"`
 }
 
 type AccessTokenResponse struct {

@@ -25,13 +25,33 @@ func WriteJSON(w http.ResponseWriter, status int, message string, data interface
 	return nil
 }
 
-func ErrorJSON(w http.ResponseWriter, status int, message string, err_data interface{}) error {
+func ErrorJSON(w http.ResponseWriter, status int, message string, errData interface{}) error {
+	var js []byte
+	var err error
+
+	errorDetail := ""
+
 	// If error data is valid error instance, grab string representation and use it as error data
-	if parsedError, isError := err_data.(error); isError {
-		err_data = parsedError.Error()
+	if parsedError, isError := errData.(error); isError {
+		errorDetail = parsedError.Error()
 	}
 
-	js, err := json.Marshal(&types.ErrorResponse{Message: message, Error: err_data})
+	if errData == nil || errorDetail == "" {
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
+			{Field: "", Detail: ""},
+		}})
+	} else if errorEl, ok := errData.(types.ErrorResponseElement); ok {
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
+			errorEl,
+		}})
+	} else if errorEls, ok := errData.([]types.ErrorResponseElement); ok {
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: errorEls})
+	} else {
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
+			{Field: "", Detail: errorDetail},
+		}})
+	}
+
 	if err != nil {
 		return err
 	}
@@ -59,7 +79,7 @@ func DatabaseErrorJSON(w http.ResponseWriter, err error) {
 
 	switch pqErr.Code {
 	case "23505":
-		ErrorJSON(w, http.StatusConflict, "Duplicate entry detected", &types.DetailedPqErrorResponse{
+		ErrorJSON(w, http.StatusConflict, "Duplicate entry detected", &types.ErrorResponseElement{
 			Detail: pqErr.Detail,
 			Field:  util.GetFieldNameFromPqErrorDetails(pqErr.Detail),
 		})
@@ -68,18 +88,18 @@ func DatabaseErrorJSON(w http.ResponseWriter, err error) {
 
 func ValidatorErrorJSON(w http.ResponseWriter, err error) {
 	if fieldErrors, ok := err.(validator.ValidationErrors); ok {
-		messages := make([]string, len(fieldErrors))
+		messages := make([]types.ErrorResponseElement, len(fieldErrors))
 
 		for i, err := range fieldErrors {
 			switch err.Tag() {
 			case "required":
-				messages[i] = fmt.Sprintf("%s is a required field", err.Field())
+				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s is a required field", err.Field())}
 			case "min":
-				messages[i] = fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())
+				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())}
 			case "email":
-				messages[i] = fmt.Sprintf("%s must be email", err.Field())
+				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must be email", err.Field())}
 			default:
-				messages[i] = fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())
+				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())}
 			}
 		}
 
