@@ -10,6 +10,7 @@ import (
 	_ "collectihub/docs"
 
 	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"gorm.io/gorm"
@@ -19,6 +20,8 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	r := chi.NewRouter()
 	api := chi.NewRouter()
 	auth := middleware.NewAuthenticator(cfg, db)
+
+	r.Use(chiMiddleware.Recoverer)
 
 	// Users
 	userAPI := user.New(l, db, cfg)
