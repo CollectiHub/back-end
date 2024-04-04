@@ -6,7 +6,14 @@ import (
 )
 
 func GenerateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	return generateRandomStringWithCharset(length, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+}
+
+func GenerateRandomNumberString(length int) string {
+	return generateRandomStringWithCharset(length, "1234567890")
+}
+
+func generateRandomStringWithCharset(length int, charset string) string {
 	seed := rand.NewSource(time.Now().UnixNano())
 	random := rand.New(seed)
 

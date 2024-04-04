@@ -29,6 +29,7 @@ func New(cfg config.Config) *gorm.DB {
 		migration_models := []interface{}{
 			&models.User{},
 			&models.RefreshToken{},
+			&models.VerificationCode{},
 		}
 
 		for i := 0; i < len(migration_models); i++ {

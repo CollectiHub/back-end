@@ -1,9 +1,10 @@
 package router
 
 import (
+	user "collectihub/api/handlers"
 	"collectihub/api/middleware"
-	"collectihub/api/resources/user"
 	"collectihub/internal/config"
+	"collectihub/internal/constants"
 	"fmt"
 
 	_ "collectihub/docs"
@@ -33,8 +34,12 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	api.Patch("/users", auth.Authenticate(userAPI.UpdateUser))
 	api.Patch("/users/change-password", auth.Authenticate(userAPI.ChangePassword))
 	api.Delete("/users", auth.Authenticate(userAPI.DeleteUser))
+	api.Post("/users/verify-email", auth.Authenticate(userAPI.VerifyEmail))
+	api.Post("/users/resend-email-verification", auth.Authenticate(userAPI.ResendEmailVerification))
+	api.Post("/users/request-password-reset", userAPI.SendPasswordResetMail)
+	api.Post("/users/verify-password-reset", userAPI.PasswordReset)
 
-	r.Mount("/api/v1", api)
+	r.Mount(constants.MainRoute, api)
 
 	// Swagger
 	r.Get("/swagger/*", httpSwagger.Handler(

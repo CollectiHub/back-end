@@ -13,6 +13,7 @@ const IncorrectOAuthStateErrorMessage = "OAuth state param is incorrect"
 const OAuthExchangeErrorMessage = "OAuth exchange failed"
 const OAuthUserDataFetchErrorMessage = "OAuth user data fetch failed"
 const UserDataReadingErrorMessage = "User data reading failed"
+const AccountIsAlreadyVerified = "Account is already verified"
 
 const SuccessMessage = "Success"
 const SuccessfulTokenRefreshMessage = "Tokens were successfully refreshed"

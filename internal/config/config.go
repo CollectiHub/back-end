@@ -26,6 +26,11 @@ type Config struct {
 	GoogleClientId     string `mapstructure:"GOOGLE_CLIENT_ID"`
 	GoogleClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
 	GoogleState        string `mapstructure:"GOOGLE_STATE"`
+
+	MailerUsername string `mapstructure:"MAIL_USERNAME"`
+	MailerPassword string `mapstructure:"MAIL_PASSWORD"`
+	MailerSmtpHost string `mapstructure:"MAIL_SMTP_HOST"`
+	MailerSmtpPort int    `mapstructure:"MAIL_SMTP_PORT"`
 }
 
 const EnvDev = "development"

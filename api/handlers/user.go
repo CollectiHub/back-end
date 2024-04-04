@@ -2,33 +2,45 @@ package user
 
 import (
 	"collectihub/api/models"
-	refreshtoken "collectihub/api/resources/refresh-token"
 	"collectihub/internal/auth"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
+	"collectihub/internal/database"
+	"collectihub/internal/mailer"
 	"collectihub/internal/util"
 	"collectihub/internal/util/json"
+	"collectihub/types"
 	"context"
 	jsonLib "encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
 
 type API struct {
-	logger         *zerolog.Logger
-	userRepository *Repository
-	config         config.Config
-	oauth          auth.OAuthConfig
-
-	refreshTokenRepository *refreshtoken.Repository
+	logger                 *zerolog.Logger
+	userRepository         *database.Repository[models.User]
+	refreshTokenRepository *database.Repository[models.RefreshToken]
+	verificationRepository *database.Repository[models.VerificationCode]
+	config                 config.Config
+	oauth                  auth.OAuthConfig
+	mailer                 *mailer.Mailer
 }
 
 func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
-	return &API{logger, NewRepository(db), cfg, auth.NewOAuth(cfg), refreshtoken.NewRepository(db)}
+	return &API{
+		logger,
+		database.NewRepository[models.User](db),
+		database.NewRepository[models.RefreshToken](db),
+		database.NewRepository[models.VerificationCode](db),
+		cfg,
+		auth.NewOAuth(cfg),
+		mailer.New(cfg, logger),
+	}
 }
 
 // SignUp godoc
@@ -64,12 +76,27 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 		Password: hashedPassword,
 	}
 
-	err = a.userRepository.Create(&newUser)
-	if err != nil {
+	if err = a.userRepository.Create(&newUser); err != nil {
 		json.DatabaseErrorJSON(w, err)
 		a.logger.Error().Err(err).Msgf("Database error during user insertion (%v)", newUser)
 		return
 	}
+
+	// Sending verification email
+	expiration := time.Now().Add(time.Minute * 5)
+	emailVerification := &models.VerificationCode{
+		UserID:  newUser.ID,
+		Expires: expiration,
+		Type:    types.EmailVerificationType,
+		Code:    util.GenerateRandomNumberString(constants.EmailVerificationCodeLength),
+	}
+
+	if err = a.verificationRepository.Create(emailVerification); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	go a.mailer.SendAccountVerificationEmail(newUser.Email, emailVerification.Code)
 
 	a.logger.Info().Msgf("New user (%s) was successfully created", newUser.Username)
 	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &models.GetUserResponse{
@@ -119,8 +146,8 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var foundUser models.User
-	if err = a.userRepository.FindOne(&foundUser, models.User{OAuthProvider: "google", OAuthIndentity: data.Email}); err != nil {
+	var user models.User
+	if err = a.userRepository.FindOne(&user, &models.User{OAuthProvider: "google", OAuthIndentity: data.Email}); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			json.DatabaseErrorJSON(w, err)
 			return
@@ -133,18 +160,17 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 			OAuthProvider:  "google",
 			OAuthIndentity: data.Email,
 			Username:       util.GenerateRandomString(10),
+			Verified:       true,
 		}
 
 		if err = a.userRepository.Create(&user); err != nil {
 			json.DatabaseErrorJSON(w, err)
 			return
 		}
-
-		a.generateUserTokenPair(w, user, true, true)
-		return
 	}
 
-	a.generateUserTokenPair(w, foundUser, true, true)
+	// Generate and return token pair for logged in / registered user
+	a.generateUserTokenPair(w, user, true, true)
 }
 
 func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +182,7 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user models.User
-	if err := a.userRepository.FindOneByEmail(&user, payload.Email); err != nil {
+	if err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email}); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
 		} else {
@@ -172,6 +198,169 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.generateUserTokenPair(w, user, true, true)
+}
+
+func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	user, err := models.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		return
+	}
+
+	payload := &models.AccountVerificationRequest{}
+	json.DecodeJSON(*r, payload)
+
+	if err := json.ValidateStruct(w, payload); err != nil {
+		return
+	}
+
+	if user.Verified {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.AccountIsAlreadyVerified, nil)
+		return
+	}
+
+	err = a.verificationRepository.FindOne(&models.VerificationCode{}, &models.VerificationCode{
+		UserID: user.ID,
+		Type:   types.EmailVerificationType,
+		Code:   payload.Code,
+	})
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, "Wrong account verification code", nil)
+		return
+	}
+
+	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Verified: true}); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	if err = a.verificationRepository.Delete(&models.VerificationCode{}, &models.VerificationCode{UserID: user.ID}); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+}
+
+func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
+	user, err := models.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		return
+	}
+
+	if user.Verified {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.AccountIsAlreadyVerified, nil)
+		return
+	}
+
+	expiration := time.Now().Add(time.Minute * 5)
+	emailVerification := &models.VerificationCode{
+		UserID:  user.ID,
+		Expires: expiration,
+		Type:    types.EmailVerificationType,
+		Code:    util.GenerateRandomNumberString(constants.EmailVerificationCodeLength),
+	}
+
+	if err = a.verificationRepository.Create(emailVerification); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	go a.mailer.SendAccountVerificationEmail(user.Email, emailVerification.Code)
+
+	json.WriteJSON(w, http.StatusOK, "New messages was successfully sent", nil)
+}
+
+func (a *API) SendPasswordResetMail(w http.ResponseWriter, r *http.Request) {
+	payload := &models.SendPasswordResetMailRequest{}
+	json.DecodeJSON(*r, payload)
+
+	if err := json.ValidateStruct(w, payload); err != nil {
+		return
+	}
+
+	var user models.User
+	err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+		return
+	}
+
+	expiration := time.Now().Add(time.Minute * 5)
+	passwordReset := &models.VerificationCode{
+		UserID:  user.ID,
+		Expires: expiration,
+		Type:    types.PasswordResetType,
+		Code:    util.GenerateRandomNumberString(constants.PasswordresetVerificationCodeLength),
+	}
+
+	if err := a.verificationRepository.Create(passwordReset); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	go a.mailer.SendPasswordResetVerificationEmail(user.Email, passwordReset.Code)
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+}
+
+func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
+	payload := &models.PasswordResetRequest{}
+	json.DecodeJSON(*r, payload)
+
+	if err := json.ValidateStruct(w, payload); err != nil {
+		return
+	}
+
+	var user models.User
+	err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+		return
+	}
+
+	var passwordReset models.VerificationCode
+	if err := a.verificationRepository.FindOne(
+		&passwordReset,
+		&models.VerificationCode{UserID: user.ID, Type: types.PasswordResetType, Code: payload.Code},
+	); err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	hashedPassword, err := util.HashPassword(payload.NewPassword)
+	if err != nil {
+		json.ErrorJSON(w, http.StatusBadRequest, constants.PasswordHashingErrorMessage, nil)
+		return
+	}
+
+	err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: hashedPassword})
+	if err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	err = a.verificationRepository.Delete(
+		&models.VerificationCode{},
+		&models.VerificationCode{UserID: user.ID, Type: types.PasswordResetType},
+	)
+	if err != nil {
+		json.DatabaseErrorJSON(w, err)
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
 func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +399,7 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	// user. It'll make anyone, who whenever had access to account, log in again
 	// when access token expires.
 	if refreshTokenFromDB.Used {
-		if err = a.refreshTokenRepository.DeleteAllByUser(user.ID); err != nil {
+		if err = a.refreshTokenRepository.Delete(&models.RefreshToken{}, &models.RefreshToken{UserID: user.ID}); err != nil {
 			json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
 			return
 		}
@@ -331,7 +520,7 @@ func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = a.userRepository.Delete(user.ID); err != nil {
+	if err = a.userRepository.DeleteOneById(&models.User{}, user.ID); err != nil {
 		json.DatabaseErrorJSON(w, err)
 		return
 	}

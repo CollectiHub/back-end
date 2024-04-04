@@ -5,6 +5,7 @@ import (
 	"collectihub/internal/util"
 	"collectihub/types"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -36,7 +37,7 @@ func ErrorJSON(w http.ResponseWriter, status int, message string, errData interf
 		errorDetail = parsedError.Error()
 	}
 
-	if errData == nil || errorDetail == "" {
+	if errData == nil {
 		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
 			{Field: "", Detail: ""},
 		}})
@@ -72,17 +73,20 @@ func DecodeJSON(r http.Request, data interface{}) error {
 }
 
 func DatabaseErrorJSON(w http.ResponseWriter, err error) {
-	pqErr, ok := err.(*pgconn.PgError)
-	if !ok {
+	var pqErr *pgconn.PgError
+	if !errors.As(err, &pqErr) {
 		ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
+		return
 	}
 
 	switch pqErr.Code {
 	case "23505":
-		ErrorJSON(w, http.StatusConflict, "Duplicate entry detected", &types.ErrorResponseElement{
+		ErrorJSON(w, http.StatusConflict, "Duplicate entry detected", types.ErrorResponseElement{
 			Detail: pqErr.Detail,
 			Field:  util.GetFieldNameFromPqErrorDetails(pqErr.Detail),
 		})
+	default:
+		ErrorJSON(w, http.StatusInternalServerError, constants.UnexpectedErrorMessage, nil)
 	}
 }
 
@@ -98,6 +102,8 @@ func ValidatorErrorJSON(w http.ResponseWriter, err error) {
 				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())}
 			case "email":
 				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must be email", err.Field())}
+			case "len":
+				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must have %s in length", err.Field(), err.Param())}
 			default:
 				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())}
 			}

@@ -6,8 +6,8 @@ type SuccessResponse struct {
 }
 
 type ErrorResponse struct {
-	Message string `json:"message"` // messsage describing an error
-	Errors  []ErrorResponseElement
+	Message string                 `json:"message"` // messsage describing an error
+	Errors  []ErrorResponseElement `json:"errors"`
 }
 
 type ErrorResponseElement struct {
