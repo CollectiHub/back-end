@@ -46,14 +46,14 @@ func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
 // SignUp godoc
 //
 //	@Summary		Sign up
-//	@Description	Serves as registration endpoints for new users creation.
+//	@Description	Serves as a registration endpoint for new users creation. After registration email verification is sent.
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		models.SignUpRequest	true	"sign up body"
 //	@Success		201		{object}	types.SuccessResponse{data=models.GetUserResponse}
-//	@Failure		400		{object}	types.ErrorResponse "Validation error; Password hashing error; Unexpected database error;"
-//	@Failure		409		{object}	types.ErrorResponse "Username of email in from request is already taken"
+//	@Failure		400		{object}	types.ErrorResponse	"Validation error; Password hashing error; Unexpected database error;"
+//	@Failure		409		{object}	types.ErrorResponse	"Username of email in from request is already taken"
 //	@Router			/auth/register [post]
 func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	payload := &models.SignUpRequest{}
@@ -108,12 +108,27 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GoogleLogin godoc
+//
+//	@Summary		Google login
+//	@Description	Used to login/register with Google account, user will be redirected to Google's OAuth page.
+//	@Tags			auth
+//	@Router			/auth/google/login [get]
 func (a *API) GoogleLogIn(w http.ResponseWriter, r *http.Request) {
 	url := a.oauth.GoogleLoginConfig.AuthCodeURL(a.config.GoogleState)
 
 	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 
+// GoogleCallback godoc
+//
+//	@Summary		Google callback
+//	@Description	This endpoint will be automatically trigerred by Google with related credentials. If user with this credetials doesn't exist in database, server will automatically create a new user (with randomized username) and return auth token pair. Otherwise it will login user with auth token pair.
+//	@Tags			auth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse{data=models.AccessTokenResponse}
+//	@Failure		400	{object}	types.ErrorResponse	"Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; JSON validation error; Unexpected database error;"
+//	@Router			/auth/google/callback [get]
 func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if state := r.URL.Query().Get("state"); state != a.config.GoogleState {
 		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectOAuthStateErrorMessage, nil)
@@ -173,6 +188,18 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	a.generateUserTokenPair(w, user, true, true)
 }
 
+// SignIn godoc
+//
+//	@Summary		Login
+//	@Description	Used to login users registered with email. Refresh token is saved in secured cookies and can be used to refresh token pair (refresh and access token).
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.SignInRequest	true	"sign in body"
+//	@Success		200		{object}	types.SuccessResponse{data=models.AccessTokenResponse}
+//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Unexpected database error; Incorrect password;"
+//	@Failure		404		{object}	types.ErrorResponse	"User not found"
+//	@Router			/auth/login [post]
 func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	payload := &models.SignInRequest{}
 	json.DecodeJSON(*r, payload)
@@ -200,6 +227,19 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	a.generateUserTokenPair(w, user, true, true)
 }
 
+// VerifyEmail godoc
+//
+//	@Summary		Verify email
+//	@Description	Helps to verify account using the code sent to user's email.
+//	@Tags			users
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.AccountVerificationRequest	true	"account verification body"
+//	@Success		200		{object}	types.SuccessResponse
+//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; User is already verified; Incorrect verification code; Unexpected database error;"
+//	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Router			/users/verify-email [post]
 func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
@@ -242,6 +282,17 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
+// ResendEmailVerification godoc
+//
+//	@Summary		Resend email verification
+//	@Description	Used to resend email verification in case of sending error or wrong email.
+//	@Tags			users
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse	"new message successfully sent"
+//	@Failure		400	{object}	types.ErrorResponse		"User is already verified; Unexpected database error;"
+//	@Failure		401	{object}	types.ErrorResponse		"User is not logged in"
+//	@Router			/users/resend-verification-email [post]
 func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
@@ -272,8 +323,20 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, "New messages was successfully sent", nil)
 }
 
-func (a *API) SendPasswordResetMail(w http.ResponseWriter, r *http.Request) {
-	payload := &models.SendPasswordResetMailRequest{}
+// SendPasswordResetEmail godoc
+//
+//	@Summary		Send password reset email
+//	@Description	Helps to send password reset verification code to user's email. It can be used to reset password on other endpoint.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.SendPasswordResetEmailRequest	true	"send password reset email body"
+//	@Success		200		{object}	types.SuccessResponse					"password email reset was successfully sent"
+//	@Failure		400		{object}	types.ErrorResponse						"JSON validation error; Unexpected database error;"
+//	@Failure		404		{object}	types.ErrorResponse						"User not found"
+//	@Router			/users/request-password-reset [post]
+func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
+	payload := &models.SendPasswordResetEmailRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -310,6 +373,18 @@ func (a *API) SendPasswordResetMail(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
+// PasswordReset godoc
+//
+//	@Summary		Password reset verification
+//	@Description	Used to update user password with code received from email.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.PasswordResetRequest	true	"password reset body"
+//	@Success		200		{object}	types.SuccessResponse
+//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Unexpected database error; Password hashing error;"
+//	@Failure		404		{object}	types.ErrorResponse	"User not found"
+//	@Router			/users/verify-password-reset [post]
 func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	payload := &models.PasswordResetRequest{}
 	json.DecodeJSON(*r, payload)
@@ -363,6 +438,17 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
+// RefreshAccessToken godoc
+//
+//	@Summary		Refresh access token
+//	@Description	Helps to refresh access token. Returns new access token and store refresh token in cookies. Refresh tokens are saved in database and their usage is tracked. So if refresh token is used second time, all user's refresh tokens will be wiped. This deletion will force all user's authenticated devices to log in again when access token expires.
+//	@Tags			auth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse{data=models.AccessTokenResponse}
+//	@Failure		400	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Failure		403	{object}	types.ErrorResponse	"Token processing error; Malicious activity detected;"
+//	@Failure		404	{object}	types.ErrorResponse	"User not found; Token not found;"
+//	@Router			/auth/refresh-token [post]
 func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	refreshTokenFromCookie, err := r.Cookie(constants.RefreshTokenCookie)
 	if err != nil {
@@ -384,13 +470,13 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	if err = a.userRepository.FindOneById(&user, userID); err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, constants.NotFoundMessage("User"), nil)
+		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
 		return
 	}
 
 	var refreshTokenFromDB models.RefreshToken
 	if err = a.refreshTokenRepository.FindOne(&refreshTokenFromDB, &models.RefreshToken{Token: refreshTokenFromCookie.Value, UserID: user.ID}); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.NotFoundMessage("Token"), nil)
+		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("Token"), nil)
 		return
 	}
 
@@ -418,6 +504,14 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	a.generateUserTokenPair(w, user, true, true)
 }
 
+// Logout godoc
+//
+//	@Summary		Logout
+//	@Description	Helps user to log out. This endpoint will trigger auth cookies expiration.
+//	@Tags			auth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse
+//	@Router			/auth/logout [post]
 func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     constants.AccessTokenCookie,
@@ -442,6 +536,16 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
+// GetMe godoc
+//
+//	@Summary		Get info about user
+//	@Description	Helps to retrieve data of authenticated user
+//	@Tags			users
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse{data=models.GetUserResponse}
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Router			/users/me [get]
 func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
@@ -458,6 +562,19 @@ func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ChangePassword godoc
+//
+//	@Summary		Change password
+//	@Description	Helps to change password of authenticated user.
+//	@Tags			users
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.ChangePasswordRequest	true	"change password body"
+//	@Success		200		{object}	types.SuccessResponse
+//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Incorrect old password; Password hashing error; Unexpected database error;"
+//	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Router			/users/change-password [patch]
 func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
@@ -491,6 +608,19 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
+// UpdateUser godoc
+//
+//	@Summary		Update user
+//	@Description	Helps to update user's data
+//	@Tags			users
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.UpdateUserRequest	true	"update user body"
+//	@Success		200		{object}	types.SuccessResponse
+//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Unexpected database error;"
+//	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Router			/users [patch]
 func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
@@ -513,6 +643,17 @@ func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
 
+// DeleteUser godoc
+//
+//	@Summary		Delete user
+//	@Description	Helps completely delete a user and all related data
+//	@Tags			users
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse
+//	@Failure		400	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Router			/users [delete]
 func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {

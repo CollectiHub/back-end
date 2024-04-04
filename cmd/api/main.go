@@ -18,8 +18,12 @@ import (
 //	@contact.email	ka1tzyu@gmail.com
 //	@contant.url	https://t.me/@higharmored
 
-// @host		localhost:4000
-// @BasePath	/api/v1
+//	@securityDefinitions.apiKey	BearerAuth
+//	@in							header
+//	@name						Authorization
+
+//	@host		localhost:4000
+//	@BasePath	/api/v1
 func main() {
 	cfg := config.New()
 	logger := logger.New(cfg.Env == config.EnvDev)

@@ -18,9 +18,185 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/google/callback": {
+            "get": {
+                "description": "This endpoint will be automatically trigerred by Google with related credentials. If user with this credetials doesn't exist in database, server will automatically create a new user (with randomized username) and return auth token pair. Otherwise it will login user with auth token pair.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Google callback",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.AccessTokenResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; JSON validation error; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/google/login": {
+            "get": {
+                "description": "Used to login/register with Google account, user will be redirected to Google's OAuth page.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Google login",
+                "responses": {}
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Used to login users registered with email. Refresh token is saved in secured cookies and can be used to refresh token pair (refresh and access token).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "sign in body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SignInRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.AccessTokenResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "JSON validation error; Unexpected database error; Incorrect password;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Helps user to log out. This endpoint will trigger auth cookies expiration.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh-token": {
+            "post": {
+                "description": "Helps to refresh access token. Returns new access token and store refresh token in cookies. Refresh tokens are saved in database and their usage is tracked. So if refresh token is used second time, all user's refresh tokens will be wiped. This deletion will force all user's authenticated devices to log in again when access token expires.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh access token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.AccessTokenResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Token processing error; Malicious activity detected;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found; Token not found;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
-                "description": "Serves as registration endpoints for new users creation.",
+                "description": "Serves as a registration endpoint for new users creation. After registration email verification is sent.",
                 "consumes": [
                     "application/json"
                 ],
@@ -75,9 +251,408 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/users": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps completely delete a user and all related data",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to update user's data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "description": "update user body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON validation error; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/change-password": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to change password of authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Change password",
+                "parameters": [
+                    {
+                        "description": "change password body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON validation error; Incorrect old password; Password hashing error; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to retrieve data of authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get info about user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.GetUserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/request-password-reset": {
+            "post": {
+                "description": "Helps to send password reset verification code to user's email. It can be used to reset password on other endpoint.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Send password reset email",
+                "parameters": [
+                    {
+                        "description": "send password reset email body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SendPasswordResetEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "password email reset was successfully sent",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON validation error; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/resend-verification-email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Used to resend email verification in case of sending error or wrong email.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Resend email verification",
+                "responses": {
+                    "200": {
+                        "description": "new message successfully sent",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "User is already verified; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/verify-email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to verify account using the code sent to user's email.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Verify email",
+                "parameters": [
+                    {
+                        "description": "account verification body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AccountVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON validation error; User is already verified; Incorrect verification code; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/verify-password-reset": {
+            "post": {
+                "description": "Used to update user password with code received from email.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Password reset verification",
+                "parameters": [
+                    {
+                        "description": "password reset body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PasswordResetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "JSON validation error; Unexpected database error; Password hashing error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "models.AccessTokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AccountVerificationRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "12345"
+                }
+            }
+        },
+        "models.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password",
+                "old_password"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "re41h0k4ge"
+                },
+                "old_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "k4kash1sense1"
+                }
+            }
+        },
         "models.GetUserResponse": {
             "type": "object",
             "properties": {
@@ -91,8 +666,12 @@ const docTemplate = `{
                     "example": "3c1e3b82-3a29-4cc0-a4b2-4e7c4ac58052"
                 },
                 "role": {
-                    "type": "string",
-                    "example": "user"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.UserRole"
+                        }
+                    ],
+                    "example": "regular"
                 },
                 "username": {
                     "type": "string",
@@ -101,6 +680,58 @@ const docTemplate = `{
                 "verified": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "models.PasswordResetRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "email",
+                "new_password"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "123456"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "re4lhok4ge@gmail.com"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "strongpass"
+                }
+            }
+        },
+        "models.SendPasswordResetEmailRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "re4lhok5ge@gmail.com"
+                }
+            }
+        },
+        "models.SignInRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "realnaruto@gmail.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "k4kash1sense1"
                 }
             }
         },
@@ -126,6 +757,20 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 6,
                     "example": "real_naruto"
+                }
+            }
+        },
+        "models.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "realhokage@gmail.com"
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "realhokage"
                 }
             }
         },
@@ -166,6 +811,24 @@ const docTemplate = `{
                     "example": "Success!"
                 }
             }
+        },
+        "types.UserRole": {
+            "type": "string",
+            "enum": [
+                "regular",
+                "admin"
+            ],
+            "x-enum-varnames": [
+                "REGULAR",
+                "ADMIN"
+            ]
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

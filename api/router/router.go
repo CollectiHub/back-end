@@ -35,8 +35,8 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	api.Patch("/users/change-password", auth.Authenticate(userAPI.ChangePassword))
 	api.Delete("/users", auth.Authenticate(userAPI.DeleteUser))
 	api.Post("/users/verify-email", auth.Authenticate(userAPI.VerifyEmail))
-	api.Post("/users/resend-email-verification", auth.Authenticate(userAPI.ResendEmailVerification))
-	api.Post("/users/request-password-reset", userAPI.SendPasswordResetMail)
+	api.Post("/users/resend-verification-email", auth.Authenticate(userAPI.ResendEmailVerification))
+	api.Post("/users/request-password-reset", userAPI.SendPasswordResetEmail)
 	api.Post("/users/verify-password-reset", userAPI.PasswordReset)
 
 	r.Mount(constants.MainRoute, api)

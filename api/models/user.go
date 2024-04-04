@@ -48,7 +48,7 @@ type AccountVerificationRequest struct {
 	Code string `json:"code" example:"12345" validate:"required,len=5"`
 }
 
-type SendPasswordResetMailRequest struct {
+type SendPasswordResetEmailRequest struct {
 	Email string `json:"email" example:"re4lhok5ge@gmail.com" validate:"required,email"`
 }
 

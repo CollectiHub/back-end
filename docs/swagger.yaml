@@ -1,5 +1,32 @@
 basePath: /api/v1
 definitions:
+  models.AccessTokenResponse:
+    properties:
+      access_token:
+        type: string
+    type: object
+  models.AccountVerificationRequest:
+    properties:
+      code:
+        example: "12345"
+        type: string
+    required:
+    - code
+    type: object
+  models.ChangePasswordRequest:
+    properties:
+      new_password:
+        example: re41h0k4ge
+        minLength: 8
+        type: string
+      old_password:
+        example: k4kash1sense1
+        minLength: 8
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
   models.GetUserResponse:
     properties:
       email:
@@ -10,14 +37,52 @@ definitions:
         format: uuid
         type: string
       role:
-        example: user
-        type: string
+        allOf:
+        - $ref: '#/definitions/types.UserRole'
+        example: regular
       username:
         example: realhokage
         type: string
       verified:
         example: true
         type: boolean
+    type: object
+  models.PasswordResetRequest:
+    properties:
+      code:
+        example: "123456"
+        type: string
+      email:
+        example: re4lhok4ge@gmail.com
+        type: string
+      new_password:
+        example: strongpass
+        minLength: 8
+        type: string
+    required:
+    - code
+    - email
+    - new_password
+    type: object
+  models.SendPasswordResetEmailRequest:
+    properties:
+      email:
+        example: re4lhok5ge@gmail.com
+        type: string
+    required:
+    - email
+    type: object
+  models.SignInRequest:
+    properties:
+      email:
+        example: realnaruto@gmail.com
+        type: string
+      password:
+        example: k4kash1sense1
+        type: string
+    required:
+    - email
+    - password
     type: object
   models.SignUpRequest:
     properties:
@@ -37,6 +102,16 @@ definitions:
     - email
     - password
     - username
+    type: object
+  models.UpdateUserRequest:
+    properties:
+      email:
+        example: realhokage@gmail.com
+        type: string
+      username:
+        example: realhokage
+        minLength: 6
+        type: string
     type: object
   types.ErrorResponse:
     properties:
@@ -66,6 +141,14 @@ definitions:
         example: Success!
         type: string
     type: object
+  types.UserRole:
+    enum:
+    - regular
+    - admin
+    type: string
+    x-enum-varnames:
+    - REGULAR
+    - ADMIN
 host: localhost:4000
 info:
   contact:
@@ -76,11 +159,133 @@ info:
   title: CollectiHub API
   version: "1.0"
 paths:
+  /auth/google/callback:
+    get:
+      description: This endpoint will be automatically trigerred by Google with related
+        credentials. If user with this credetials doesn't exist in database, server
+        will automatically create a new user (with randomized username) and return
+        auth token pair. Otherwise it will login user with auth token pair.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.AccessTokenResponse'
+              type: object
+        "400":
+          description: Incorrect OAuth state; OAuth exchange error; OAuth user fetching
+            error; UserData reading error; JSON validation error; Unexpected database
+            error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Google callback
+      tags:
+      - auth
+  /auth/google/login:
+    get:
+      description: Used to login/register with Google account, user will be redirected
+        to Google's OAuth page.
+      responses: {}
+      summary: Google login
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Used to login users registered with email. Refresh token is saved
+        in secured cookies and can be used to refresh token pair (refresh and access
+        token).
+      parameters:
+      - description: sign in body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SignInRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.AccessTokenResponse'
+              type: object
+        "400":
+          description: JSON validation error; Unexpected database error; Incorrect
+            password;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Helps user to log out. This endpoint will trigger auth cookies
+        expiration.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh-token:
+    post:
+      description: Helps to refresh access token. Returns new access token and store
+        refresh token in cookies. Refresh tokens are saved in database and their usage
+        is tracked. So if refresh token is used second time, all user's refresh tokens
+        will be wiped. This deletion will force all user's authenticated devices to
+        log in again when access token expires.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.AccessTokenResponse'
+              type: object
+        "400":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Token processing error; Malicious activity detected;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: User not found; Token not found;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:
       - application/json
-      description: Serves as registration endpoints for new users creation.
+      description: Serves as a registration endpoint for new users creation. After
+        registration email verification is sent.
       parameters:
       - description: sign up body
         in: body
@@ -112,4 +317,239 @@ paths:
       summary: Sign up
       tags:
       - auth
+  /users:
+    delete:
+      description: Helps completely delete a user and all related data
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Helps to update user's data
+      parameters:
+      - description: update user body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: JSON validation error; Unexpected database error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - users
+  /users/change-password:
+    patch:
+      consumes:
+      - application/json
+      description: Helps to change password of authenticated user.
+      parameters:
+      - description: change password body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: JSON validation error; Incorrect old password; Password hashing
+            error; Unexpected database error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - users
+  /users/me:
+    get:
+      description: Helps to retrieve data of authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.GetUserResponse'
+              type: object
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get info about user
+      tags:
+      - users
+  /users/request-password-reset:
+    post:
+      consumes:
+      - application/json
+      description: Helps to send password reset verification code to user's email.
+        It can be used to reset password on other endpoint.
+      parameters:
+      - description: send password reset email body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendPasswordResetEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: password email reset was successfully sent
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: JSON validation error; Unexpected database error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Send password reset email
+      tags:
+      - users
+  /users/resend-verification-email:
+    post:
+      description: Used to resend email verification in case of sending error or wrong
+        email.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: new message successfully sent
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: User is already verified; Unexpected database error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resend email verification
+      tags:
+      - users
+  /users/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Helps to verify account using the code sent to user's email.
+      parameters:
+      - description: account verification body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AccountVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: JSON validation error; User is already verified; Incorrect
+            verification code; Unexpected database error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify email
+      tags:
+      - users
+  /users/verify-password-reset:
+    post:
+      consumes:
+      - application/json
+      description: Used to update user password with code received from email.
+      parameters:
+      - description: password reset body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "400":
+          description: JSON validation error; Unexpected database error; Password
+            hashing error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Password reset verification
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
