@@ -30,8 +30,8 @@ type SignUpRequest struct {
 }
 
 type SignInRequest struct {
-	Email    string `json:"email" example:"realnaruto@gmail.com" validate:"required"`
-	Password string `json:"password" example:"k4kash1sense1" validate:"required"`
+	Email    string `json:"email" example:"realnaruto@gmail.com" validate:"required,email"`
+	Password string `json:"password" example:"k4kash1sense1" validate:"required,min=8"`
 }
 
 type UpdateUserRequest struct {

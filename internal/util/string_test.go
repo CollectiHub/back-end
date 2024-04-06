@@ -55,6 +55,15 @@ func TestGetJsonFieldName(t *testing.T) {
 			t.Errorf("GetJsonFieldName(testStruct{}, \"Field2\") = \"%s\"; want \"field2\"", got)
 		}
 	})
+
+	t.Run("should return json field name for pointer struct", func(t *testing.T) {
+		got := GetJsonFieldName(&testStruct{}, "Field1")
+		expected := "field1"
+
+		if got != expected {
+			t.Errorf("GetJsonFieldName(testStruct{}, \"Field1\") = \"%s\"; want \"field1\"", got)
+		}
+	})
 }
 
 func TestGenerateRandomString(t *testing.T) {

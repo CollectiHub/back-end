@@ -1,16 +1,13 @@
 package json
 
 import (
+	"collectihub/internal/common"
 	"collectihub/internal/constants"
-	"collectihub/internal/util"
 	"collectihub/types"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, message string, data interface{}) error {
@@ -26,31 +23,17 @@ func WriteJSON(w http.ResponseWriter, status int, message string, data interface
 	return nil
 }
 
-func ErrorJSON(w http.ResponseWriter, status int, message string, errData interface{}) error {
+func ErrorJSON(w http.ResponseWriter, message string, httpError types.HttpError) error {
 	var js []byte
 	var err error
 
-	errorDetail := ""
-
 	// If error data is valid error instance, grab string representation and use it as error data
-	if parsedError, isError := errData.(error); isError {
-		errorDetail = parsedError.Error()
-	}
-
-	if errData == nil {
-		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
-			{Field: "", Detail: ""},
-		}})
-	} else if errorEl, ok := errData.(types.ErrorResponseElement); ok {
-		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
-			errorEl,
-		}})
-	} else if errorEls, ok := errData.([]types.ErrorResponseElement); ok {
-		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: errorEls})
+	if parsedError, ok := httpError.Err.(error); ok {
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Error: parsedError.Error()})
+	} else if parsedErrors, ok := httpError.Err.([]types.DetailedError); ok {
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: parsedErrors})
 	} else {
-		js, err = json.Marshal(&types.ErrorResponse{Message: message, Errors: []types.ErrorResponseElement{
-			{Field: "", Detail: errorDetail},
-		}})
+		js, err = json.Marshal(&types.ErrorResponse{Message: message, Error: ""})
 	}
 
 	if err != nil {
@@ -58,7 +41,7 @@ func ErrorJSON(w http.ResponseWriter, status int, message string, errData interf
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+	w.WriteHeader(httpError.Status)
 	w.Write(js)
 
 	return nil
@@ -72,54 +55,11 @@ func DecodeJSON(r http.Request, data interface{}) error {
 	return nil
 }
 
-func DatabaseErrorJSON(w http.ResponseWriter, err error) {
-	var pqErr *pgconn.PgError
-	if !errors.As(err, &pqErr) {
-		ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
-		return
-	}
-
-	switch pqErr.Code {
-	case "23505":
-		ErrorJSON(w, http.StatusConflict, "Duplicate entry detected", types.ErrorResponseElement{
-			Detail: pqErr.Detail,
-			Field:  util.GetFieldNameFromPqErrorDetails(pqErr.Detail),
-		})
-	default:
-		ErrorJSON(w, http.StatusInternalServerError, constants.UnexpectedErrorMessage, nil)
-	}
-}
-
-func ValidatorErrorJSON(w http.ResponseWriter, err error, obj interface{}) {
-	if fieldErrors, ok := err.(validator.ValidationErrors); ok {
-		messages := make([]types.ErrorResponseElement, len(fieldErrors))
-
-		for i, err := range fieldErrors {
-			legitFieldName := util.GetJsonFieldName(obj, err.Field())
-
-			switch err.Tag() {
-			case "required":
-				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s is a required field", err.Field())}
-			case "min":
-				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())}
-			case "email":
-				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s must be email", err.Field())}
-			case "len":
-				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s must have %s in length", err.Field(), err.Param())}
-			default:
-				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())}
-			}
-		}
-
-		ErrorJSON(w, http.StatusBadRequest, constants.JsonValidationErrorMessage, messages)
-	}
-}
-
 func ValidateStruct(w http.ResponseWriter, payload interface{}) error {
 	validate := validator.New()
 	err := validate.Struct(payload)
 	if err != nil {
-		ValidatorErrorJSON(w, err, payload)
+		ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return err
 	}
 

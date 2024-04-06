@@ -6,6 +6,7 @@ import (
 	"collectihub/internal/constants"
 	"collectihub/internal/util"
 	"collectihub/internal/util/json"
+	"collectihub/types"
 	"context"
 	"net/http"
 	"strings"
@@ -35,25 +36,25 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 		} else if cookie_err == nil {
 			access_token = cookie.Value
 		} else {
-			json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+			json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 			return
 		}
 
 		sub, err := util.ValidateToken(access_token, a.config.AccessTokenPublicKey)
 		if err != nil {
-			json.ErrorJSON(w, http.StatusUnauthorized, constants.TokenIsNotValidErrorMessage, err)
+			json.ErrorJSON(w, constants.TokenIsNotValidErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 			return
 		}
 
 		user_id, ok := sub.(string)
 		if !ok {
-			json.ErrorJSON(w, http.StatusBadRequest, constants.UnexpectedErrorMessage, nil)
+			json.ErrorJSON(w, constants.UnexpectedErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 			return
 		}
 
 		var user models.User
 		if err = a.db.First(&user, "id = ?", user_id).Error; err != nil {
-			json.ErrorJSON(w, http.StatusForbidden, constants.NotFoundMessage("User"), nil)
+			json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusForbidden, Err: nil})
 			return
 		}
 

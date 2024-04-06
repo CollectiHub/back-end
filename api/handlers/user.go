@@ -3,6 +3,7 @@ package user
 import (
 	"collectihub/api/models"
 	"collectihub/internal/auth"
+	"collectihub/internal/common"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
 	"collectihub/internal/database"
@@ -65,7 +66,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := util.HashPassword(payload.Password)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.PasswordHashingErrorMessage, err)
+		json.ErrorJSON(w, constants.PasswordHashingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: err})
 		a.logger.Error().Err(err).Msgf("Error during password hashing for user (%s)", payload.Email)
 		return
 	}
@@ -77,7 +78,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = a.userRepository.Create(&newUser); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		a.logger.Error().Err(err).Msgf("Database error during user insertion (%v)", newUser)
 		return
 	}
@@ -92,7 +93,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = a.verificationRepository.Create(emailVerification); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -131,7 +132,7 @@ func (a *API) GoogleLogIn(w http.ResponseWriter, r *http.Request) {
 //	@Router			/auth/google/callback [get]
 func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if state := r.URL.Query().Get("state"); state != a.config.GoogleState {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectOAuthStateErrorMessage, nil)
+		json.ErrorJSON(w, constants.IncorrectOAuthStateErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
@@ -139,32 +140,32 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	token, err := a.oauth.GoogleLoginConfig.Exchange(context.Background(), code)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.OAuthExchangeErrorMessage, nil)
+		json.ErrorJSON(w, constants.OAuthExchangeErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	res, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.OAuthUserDataFetchErrorMessage, nil)
+		json.ErrorJSON(w, constants.OAuthUserDataFetchErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	userData, err := io.ReadAll(res.Body)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.UserDataReadingErrorMessage, nil)
+		json.ErrorJSON(w, constants.UserDataReadingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	data := &models.GoogleUserData{}
 	if err = jsonLib.Unmarshal(userData, &data); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.JsonValidationErrorMessage, nil)
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	var user models.User
 	if err = a.userRepository.FindOne(&user, &models.User{OAuthProvider: "google", OAuthIndentity: data.Email}); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			json.DatabaseErrorJSON(w, err)
+			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 			return
 		}
 	}
@@ -179,7 +180,7 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err = a.userRepository.Create(&user); err != nil {
-			json.DatabaseErrorJSON(w, err)
+			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 			return
 		}
 	}
@@ -211,16 +212,16 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email}); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+			json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		} else {
-			json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
+			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		}
 
 		return
 	}
 
 	if err := util.VerifyPassword(user.Password, payload.Password); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectPasswordErrorMessage, nil)
+		json.ErrorJSON(w, constants.IncorrectPasswordErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
@@ -243,7 +244,7 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
@@ -255,7 +256,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user.Verified {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.AccountIsAlreadyVerified, nil)
+		json.ErrorJSON(w, constants.AccountIsAlreadyVerified, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
@@ -265,17 +266,17 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		Code:   payload.Code,
 	})
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, "Wrong account verification code", nil)
+		json.ErrorJSON(w, constants.WrongVerificationCode, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
 	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Verified: true}); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
 	if err = a.verificationRepository.Delete(&models.VerificationCode{}, &models.VerificationCode{UserID: user.ID}); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -296,12 +297,12 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
 	if user.Verified {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.AccountIsAlreadyVerified, nil)
+		json.ErrorJSON(w, constants.AccountIsAlreadyVerified, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
@@ -314,7 +315,7 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = a.verificationRepository.Create(emailVerification); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -346,12 +347,12 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+		json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		return
 	}
 
@@ -364,7 +365,7 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.verificationRepository.Create(passwordReset); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -396,12 +397,12 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+		json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		return
 	}
 
@@ -410,19 +411,19 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 		&passwordReset,
 		&models.VerificationCode{UserID: user.ID, Type: types.PasswordResetType, Code: payload.Code},
 	); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
 	hashedPassword, err := util.HashPassword(payload.NewPassword)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.PasswordHashingErrorMessage, nil)
+		json.ErrorJSON(w, constants.PasswordHashingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: hashedPassword})
 	if err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -431,7 +432,7 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 		&models.VerificationCode{UserID: user.ID, Type: types.PasswordResetType},
 	)
 	if err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -452,31 +453,31 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	refreshTokenFromCookie, err := r.Cookie(constants.RefreshTokenCookie)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
+		json.ErrorJSON(w, constants.TokenProcessingErrorMessage, types.HttpError{Status: http.StatusForbidden, Err: nil})
 		return
 	}
 
 	sub, err := util.ValidateToken(refreshTokenFromCookie.Value, a.config.RefreshTokenPublicKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
+		json.ErrorJSON(w, constants.TokenProcessingErrorMessage, types.HttpError{Status: http.StatusForbidden, Err: nil})
 		return
 	}
 
 	userID, ok := sub.(string)
 	if !ok {
-		json.ErrorJSON(w, http.StatusForbidden, constants.TokenProcessingErrorMessage, nil)
+		json.ErrorJSON(w, constants.TokenProcessingErrorMessage, types.HttpError{Status: http.StatusForbidden, Err: nil})
 		return
 	}
 
 	var user models.User
 	if err = a.userRepository.FindOneById(&user, userID); err != nil {
-		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("User"), nil)
+		json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		return
 	}
 
 	var refreshTokenFromDB models.RefreshToken
 	if err = a.refreshTokenRepository.FindOne(&refreshTokenFromDB, &models.RefreshToken{Token: refreshTokenFromCookie.Value, UserID: user.ID}); err != nil {
-		json.ErrorJSON(w, http.StatusNotFound, constants.NotFoundMessage("Token"), nil)
+		json.ErrorJSON(w, constants.NotFoundMessage("Token"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		return
 	}
 
@@ -486,18 +487,18 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	// when access token expires.
 	if refreshTokenFromDB.Used {
 		if err = a.refreshTokenRepository.Delete(&models.RefreshToken{}, &models.RefreshToken{UserID: user.ID}); err != nil {
-			json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
+			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 			return
 		}
 
-		json.ErrorJSON(w, http.StatusForbidden, constants.MaliciousActivityErrorMessage, nil)
+		json.ErrorJSON(w, constants.MaliciousActivityErrorMessage, types.HttpError{Status: http.StatusForbidden, Err: nil})
 		return
 	}
 
 	// If token was not used before, we mark it as used and give the user new
 	// set of tokens.
 	if err = a.refreshTokenRepository.Update(&refreshTokenFromDB, &models.RefreshToken{Used: true}); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.DatabaseErrorMessage, nil)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -549,7 +550,7 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
@@ -578,7 +579,7 @@ func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
@@ -590,18 +591,18 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = util.VerifyPassword(user.Password, payload.OldPassword); err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.IncorrectPasswordErrorMessage, nil)
+		json.ErrorJSON(w, constants.IncorrectPasswordErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	hashedPassword, err := util.HashPassword(payload.NewPassword)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.PasswordHashingErrorMessage, nil)
+		json.ErrorJSON(w, constants.PasswordHashingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: hashedPassword}); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -624,7 +625,7 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
@@ -636,7 +637,7 @@ func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Username: payload.Username, Email: payload.Email}); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -657,12 +658,12 @@ func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusUnauthorized, constants.NotLoggedInErrorMessage, nil)
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
 	if err = a.userRepository.DeleteOneById(&models.User{}, user.ID); err != nil {
-		json.DatabaseErrorJSON(w, err)
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
@@ -672,13 +673,13 @@ func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
 func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, setCookies bool, writeResponse bool) {
 	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user, a.config.AccessTokenPrivateKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
+		json.ErrorJSON(w, constants.TokenProcessingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: err})
 		return
 	}
 
 	refreshToken, err := util.CreateToken(a.config.RefreshTokenExpiresIn, user, a.config.RefreshTokenPrivateKey)
 	if err != nil {
-		json.ErrorJSON(w, http.StatusBadRequest, constants.TokenProcessingErrorMessage, err)
+		json.ErrorJSON(w, constants.TokenProcessingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: err})
 		return
 	}
 
