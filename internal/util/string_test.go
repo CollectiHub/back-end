@@ -2,6 +2,61 @@ package util
 
 import "testing"
 
+func TestDecapitalize(t *testing.T) {
+	t.Run("should return empty string", func(t *testing.T) {
+		got := Decapitalize("")
+		expected := ""
+
+		if got != expected {
+			t.Errorf("Decapitalize(\"\") = \"%s\"; want \"\"", got)
+		}
+	})
+
+	t.Run("should return decapitalized string", func(t *testing.T) {
+		got := Decapitalize("Hello")
+		expected := "hello"
+
+		if got != expected {
+			t.Errorf("Decapitalize(\"Hello\") = \"%s\"; want \"hello\"", got)
+		}
+	})
+}
+
+func TestGetJsonFieldName(t *testing.T) {
+	type testStruct struct {
+		Field1 string `json:"field1"`
+		Field2 string `json:"field2,omitempty"`
+		Field3 string `json:"-"`
+	}
+
+	t.Run("should return empty string", func(t *testing.T) {
+		got := GetJsonFieldName(testStruct{}, "Field3")
+		expected := ""
+
+		if got != expected {
+			t.Errorf("GetJsonFieldName(testStruct{}, \"Field3\") = \"%s\"; want \"\"", got)
+		}
+	})
+
+	t.Run("should return json field name", func(t *testing.T) {
+		got := GetJsonFieldName(testStruct{}, "Field1")
+		expected := "field1"
+
+		if got != expected {
+			t.Errorf("GetJsonFieldName(testStruct{}, \"Field1\") = \"%s\"; want \"field1\"", got)
+		}
+	})
+
+	t.Run("should return json field name without leftovers", func(t *testing.T) {
+		got := GetJsonFieldName(testStruct{}, "Field2")
+		expected := "field2"
+
+		if got != expected {
+			t.Errorf("GetJsonFieldName(testStruct{}, \"Field2\") = \"%s\"; want \"field2\"", got)
+		}
+	})
+}
+
 func TestGenerateRandomString(t *testing.T) {
 	t.Run("should return empty string", func(t *testing.T) {
 		got := GenerateRandomString(0)

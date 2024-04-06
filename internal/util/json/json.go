@@ -90,22 +90,24 @@ func DatabaseErrorJSON(w http.ResponseWriter, err error) {
 	}
 }
 
-func ValidatorErrorJSON(w http.ResponseWriter, err error) {
+func ValidatorErrorJSON(w http.ResponseWriter, err error, obj interface{}) {
 	if fieldErrors, ok := err.(validator.ValidationErrors); ok {
 		messages := make([]types.ErrorResponseElement, len(fieldErrors))
 
 		for i, err := range fieldErrors {
+			legitFieldName := util.GetJsonFieldName(obj, err.Field())
+
 			switch err.Tag() {
 			case "required":
-				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s is a required field", err.Field())}
+				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s is a required field", err.Field())}
 			case "min":
-				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())}
+				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s must be a minimum of %s in length", err.Field(), err.Param())}
 			case "email":
-				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must be email", err.Field())}
+				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s must be email", err.Field())}
 			case "len":
-				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("%s must have %s in length", err.Field(), err.Param())}
+				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("%s must have %s in length", err.Field(), err.Param())}
 			default:
-				messages[i] = types.ErrorResponseElement{Field: err.Field(), Detail: fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())}
+				messages[i] = types.ErrorResponseElement{Field: legitFieldName, Detail: fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())}
 			}
 		}
 
@@ -117,7 +119,7 @@ func ValidateStruct(w http.ResponseWriter, payload interface{}) error {
 	validate := validator.New()
 	err := validate.Struct(payload)
 	if err != nil {
-		ValidatorErrorJSON(w, err)
+		ValidatorErrorJSON(w, err, payload)
 		return err
 	}
 
