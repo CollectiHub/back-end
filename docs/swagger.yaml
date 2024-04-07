@@ -79,6 +79,7 @@ definitions:
         type: string
       password:
         example: k4kash1sense1
+        minLength: 8
         type: string
     required:
     - email
@@ -113,17 +114,7 @@ definitions:
         minLength: 6
         type: string
     type: object
-  types.ErrorResponse:
-    properties:
-      errors:
-        items:
-          $ref: '#/definitions/types.ErrorResponseElement'
-        type: array
-      message:
-        description: messsage describing an error
-        type: string
-    type: object
-  types.ErrorResponseElement:
+  types.DetailedError:
     properties:
       detail:
         description: detail of field's error, if error is unknown, this field will
@@ -132,6 +123,19 @@ definitions:
       field:
         description: problematic field on which error occured, if error has no specific
           errored field (in case of general error) this field will be "" (empty string)
+        type: string
+    type: object
+  types.ErrorResponse:
+    properties:
+      error:
+        description: error type
+        type: string
+      errors:
+        items:
+          $ref: '#/definitions/types.DetailedError'
+        type: array
+      message:
+        description: messsage describing an error
         type: string
     type: object
   types.SuccessResponse:
@@ -179,8 +183,11 @@ paths:
               type: object
         "400":
           description: Incorrect OAuth state; OAuth exchange error; OAuth user fetching
-            error; UserData reading error; JSON validation error; Unexpected database
-            error;
+            error; UserData reading error; Unexpected database error;
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Google callback
@@ -221,12 +228,15 @@ paths:
                   $ref: '#/definitions/models.AccessTokenResponse'
               type: object
         "400":
-          description: JSON validation error; Unexpected database error; Incorrect
-            password;
+          description: Unexpected database error; Incorrect password;
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: User not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Login
@@ -306,12 +316,15 @@ paths:
                   $ref: '#/definitions/models.GetUserResponse'
               type: object
         "400":
-          description: Validation error; Password hashing error; Unexpected database
-            error;
+          description: Password hashing error; Unexpected database error;
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "409":
           description: Username of email in from request is already taken
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Sign up
@@ -359,11 +372,15 @@ paths:
           schema:
             $ref: '#/definitions/types.SuccessResponse'
         "400":
-          description: JSON validation error; Unexpected database error;
+          description: Unexpected database error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "401":
           description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       security:
@@ -391,12 +408,16 @@ paths:
           schema:
             $ref: '#/definitions/types.SuccessResponse'
         "400":
-          description: JSON validation error; Incorrect old password; Password hashing
-            error; Unexpected database error;
+          description: Incorrect old password; Password hashing error; Unexpected
+            database error;
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "401":
           description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       security:
@@ -449,11 +470,15 @@ paths:
           schema:
             $ref: '#/definitions/types.SuccessResponse'
         "400":
-          description: JSON validation error; Unexpected database error;
+          description: Unexpected database error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: User not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Send password reset email
@@ -503,12 +528,16 @@ paths:
           schema:
             $ref: '#/definitions/types.SuccessResponse'
         "400":
-          description: JSON validation error; User is already verified; Incorrect
-            verification code; Unexpected database error;
+          description: User is already verified; Incorrect verification code; Unexpected
+            database error;
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "401":
           description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       security:
@@ -536,12 +565,15 @@ paths:
           schema:
             $ref: '#/definitions/types.SuccessResponse'
         "400":
-          description: JSON validation error; Unexpected database error; Password
-            hashing error;
+          description: Unexpected database error; Password hashing error;
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: User not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Password reset verification

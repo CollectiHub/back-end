@@ -48,7 +48,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; JSON validation error; Unexpected database error;",
+                        "description": "Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; Unexpected database error;",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -110,13 +116,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "JSON validation error; Unexpected database error; Incorrect password;",
+                        "description": "Unexpected database error; Incorrect password;",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -238,13 +250,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Validation error; Password hashing error; Unexpected database error;",
+                        "description": "Password hashing error; Unexpected database error;",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Username of email in from request is already taken",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -324,13 +342,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "JSON validation error; Unexpected database error;",
+                        "description": "Unexpected database error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -375,13 +399,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "JSON validation error; Incorrect old password; Password hashing error; Unexpected database error;",
+                        "description": "Incorrect old password; Password hashing error; Unexpected database error;",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -464,13 +494,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "JSON validation error; Unexpected database error;",
+                        "description": "Unexpected database error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -552,13 +588,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "JSON validation error; User is already verified; Incorrect verification code; Unexpected database error;",
+                        "description": "User is already verified; Incorrect verification code; Unexpected database error;",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -598,13 +640,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "JSON validation error; Unexpected database error; Password hashing error;",
+                        "description": "Unexpected database error; Password hashing error;",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -731,6 +779,7 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
+                    "minLength": 8,
                     "example": "k4kash1sense1"
                 }
             }
@@ -774,22 +823,7 @@ const docTemplate = `{
                 }
             }
         },
-        "types.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "errors": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.ErrorResponseElement"
-                    }
-                },
-                "message": {
-                    "description": "messsage describing an error",
-                    "type": "string"
-                }
-            }
-        },
-        "types.ErrorResponseElement": {
+        "types.DetailedError": {
             "type": "object",
             "properties": {
                 "detail": {
@@ -798,6 +832,25 @@ const docTemplate = `{
                 },
                 "field": {
                     "description": "problematic field on which error occured, if error has no specific errored field (in case of general error) this field will be \"\" (empty string)",
+                    "type": "string"
+                }
+            }
+        },
+        "types.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "error type",
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DetailedError"
+                    }
+                },
+                "message": {
+                    "description": "messsage describing an error",
                     "type": "string"
                 }
             }

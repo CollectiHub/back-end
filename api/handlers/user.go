@@ -53,7 +53,8 @@ func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
 //	@Produce		json
 //	@Param			body	body		models.SignUpRequest	true	"sign up body"
 //	@Success		201		{object}	types.SuccessResponse{data=models.GetUserResponse}
-//	@Failure		400		{object}	types.ErrorResponse	"Validation error; Password hashing error; Unexpected database error;"
+//	@Failure		400		{object}	types.ErrorResponse	"Password hashing error; Unexpected database error;"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Failure		409		{object}	types.ErrorResponse	"Username of email in from request is already taken"
 //	@Router			/auth/register [post]
 func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +130,8 @@ func (a *API) GoogleLogIn(w http.ResponseWriter, r *http.Request) {
 //	@Tags			auth
 //	@Produce		json
 //	@Success		200	{object}	types.SuccessResponse{data=models.AccessTokenResponse}
-//	@Failure		400	{object}	types.ErrorResponse	"Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; JSON validation error; Unexpected database error;"
+//	@Failure		400	{object}	types.ErrorResponse	"Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; Unexpected database error;"
+//	@Failure		422	{object}	types.ErrorResponse	"Validation error"
 //	@Router			/auth/google/callback [get]
 func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if state := r.URL.Query().Get("state"); state != a.config.GoogleState {
@@ -159,7 +161,7 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	data := &models.GoogleUserData{}
 	if err = jsonLib.Unmarshal(userData, &data); err != nil {
-		json.ErrorJSON(w, constants.JsonValidationErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, types.HttpError{Status: http.StatusUnprocessableEntity, Err: nil})
 		return
 	}
 
@@ -199,8 +201,9 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			body	body		models.SignInRequest	true	"sign in body"
 //	@Success		200		{object}	types.SuccessResponse{data=models.AccessTokenResponse}
-//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Unexpected database error; Incorrect password;"
+//	@Failure		400		{object}	types.ErrorResponse	"Unexpected database error; Incorrect password;"
 //	@Failure		404		{object}	types.ErrorResponse	"User not found"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/auth/login [post]
 func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	payload := &models.SignInRequest{}
@@ -240,8 +243,9 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			body	body		models.AccountVerificationRequest	true	"account verification body"
 //	@Success		200		{object}	types.SuccessResponse
-//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; User is already verified; Incorrect verification code; Unexpected database error;"
+//	@Failure		400		{object}	types.ErrorResponse	"User is already verified; Incorrect verification code; Unexpected database error;"
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users/verify-email [post]
 func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
@@ -336,8 +340,9 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			body	body		models.SendPasswordResetEmailRequest	true	"send password reset email body"
 //	@Success		200		{object}	types.SuccessResponse					"password email reset was successfully sent"
-//	@Failure		400		{object}	types.ErrorResponse						"JSON validation error; Unexpected database error;"
+//	@Failure		400		{object}	types.ErrorResponse						"Unexpected database error"
 //	@Failure		404		{object}	types.ErrorResponse						"User not found"
+//	@Failure		422		{object}	types.ErrorResponse						"Validation error"
 //	@Router			/users/request-password-reset [post]
 func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 	payload := &models.SendPasswordResetEmailRequest{}
@@ -387,8 +392,9 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			body	body		models.PasswordResetRequest	true	"password reset body"
 //	@Success		200		{object}	types.SuccessResponse
-//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Unexpected database error; Password hashing error;"
+//	@Failure		400		{object}	types.ErrorResponse	"Unexpected database error; Password hashing error;"
 //	@Failure		404		{object}	types.ErrorResponse	"User not found"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users/verify-password-reset [post]
 func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	payload := &models.PasswordResetRequest{}
@@ -578,8 +584,9 @@ func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			body	body		models.ChangePasswordRequest	true	"change password body"
 //	@Success		200		{object}	types.SuccessResponse
-//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Incorrect old password; Password hashing error; Unexpected database error;"
+//	@Failure		400		{object}	types.ErrorResponse	"Incorrect old password; Password hashing error; Unexpected database error;"
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users/change-password [patch]
 func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
@@ -625,8 +632,9 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Param			body	body		models.UpdateUserRequest	true	"update user body"
 //	@Success		200		{object}	types.SuccessResponse
-//	@Failure		400		{object}	types.ErrorResponse	"JSON validation error; Unexpected database error;"
+//	@Failure		400		{object}	types.ErrorResponse	"Unexpected database error"
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users [patch]
 func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserFromRequestContext(r)
