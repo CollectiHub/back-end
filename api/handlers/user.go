@@ -61,6 +61,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
@@ -206,6 +207,7 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
@@ -252,6 +254,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
@@ -341,6 +344,7 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
@@ -391,6 +395,7 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
@@ -587,6 +592,7 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
@@ -633,6 +639,7 @@ func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 

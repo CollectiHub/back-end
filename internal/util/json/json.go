@@ -1,8 +1,6 @@
 package json
 
 import (
-	"collectihub/internal/common"
-	"collectihub/internal/constants"
 	"collectihub/types"
 	"encoding/json"
 	"net/http"
@@ -59,7 +57,6 @@ func ValidateStruct(w http.ResponseWriter, payload interface{}) error {
 	validate := validator.New()
 	err := validate.Struct(payload)
 	if err != nil {
-		ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return err
 	}
 
