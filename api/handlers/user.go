@@ -279,7 +279,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		Code:   payload.Code,
 	})
 	if err != nil {
-		json.ErrorJSON(w, constants.WrongVerificationCode, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
+		json.ErrorJSON(w, constants.WrongVerificationCodeErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 

@@ -20,6 +20,7 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	r := chi.NewRouter()
 	api := chi.NewRouter()
 	auth := middleware.NewAuthenticator(cfg, db)
+	rr := middleware.NewRoleRequirer(cfg, db)
 
 	r.Use(chiMiddleware.Recoverer)
 
