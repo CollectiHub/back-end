@@ -5,7 +5,9 @@ import (
 	"collectihub/api/middleware"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
+	"collectihub/types"
 	"fmt"
+	"net/http"
 
 	_ "collectihub/docs"
 
@@ -42,6 +44,8 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	api.Post("/users/resend-verification-email", auth.Authenticate(userAPI.ResendEmailVerification))
 	api.Post("/users/request-password-reset", userAPI.SendPasswordResetEmail)
 	api.Post("/users/verify-password-reset", userAPI.PasswordReset)
+
+	api.Get("/test", rr.RequireRole(func(w http.ResponseWriter, r *http.Request) {}, types.ADMIN))
 
 	r.Mount(constants.MainRoute, api)
 

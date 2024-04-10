@@ -71,7 +71,7 @@ const docTemplate = `{
                 "summary": "Google login",
                 "responses": {
                     "303": {
-                        "description": "See Other"
+                        "description": "Redirected"
                     }
                 }
             }
