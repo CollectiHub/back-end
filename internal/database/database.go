@@ -26,6 +26,22 @@ func New(cfg config.Config) *gorm.DB {
 	}
 
 	if cfg.Env == config.EnvDev {
+		db.Debug().Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
+		db.Debug().Exec(`
+			DO $$ BEGIN
+				CREATE TYPE user_role AS ENUM ('regular', 'admin');
+			EXCEPTION
+				WHEN duplicate_object THEN null;
+			END $$;
+		`)
+		db.Debug().Exec(`
+			DO $$ BEGIN
+				CREATE TYPE verification_type AS ENUM ('email-verification', 'password-reset');
+			EXCEPTION
+				WHEN duplicate_object THEN null;
+			END $$;
+		`)
+
 		migration_models := []interface{}{
 			&models.User{},
 			&models.RefreshToken{},
