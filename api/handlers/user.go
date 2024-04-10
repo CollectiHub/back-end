@@ -122,6 +122,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 //	@Summary		Google login
 //	@Description	Used to login/register with Google account, user will be redirected to Google's OAuth page.
 //	@Tags			auth
+//	@Success		303 "Redirected"
 //	@Router			/auth/google/login [get]
 func (a *API) GoogleLogIn(w http.ResponseWriter, r *http.Request) {
 	url := a.oauth.GoogleLoginConfig.AuthCodeURL(a.config.GoogleState)

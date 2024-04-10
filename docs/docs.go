@@ -69,7 +69,11 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Google login",
-                "responses": {}
+                "responses": {
+                    "303": {
+                        "description": "See Other"
+                    }
+                }
             }
         },
         "/auth/login": {

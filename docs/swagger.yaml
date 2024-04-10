@@ -197,7 +197,9 @@ paths:
     get:
       description: Used to login/register with Google account, user will be redirected
         to Google's OAuth page.
-      responses: {}
+      responses:
+        "303":
+          description: See Other
       summary: Google login
       tags:
       - auth
