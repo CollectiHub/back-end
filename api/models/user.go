@@ -26,7 +26,7 @@ type User struct {
 type SignUpRequest struct {
 	Username string `json:"username" example:"real_naruto" validate:"required,min=6"`
 	Email    string `json:"email" example:"realnaruto@gmail.com" validate:"required,email"`
-	Password string `json:"password" example:"k4kash1sense1" validate:"required,min=8"` // TODO: update when password is ready
+	Password string `json:"password" example:"k4kash1sense1" validate:"required,upassword"`
 }
 
 type SignInRequest struct {

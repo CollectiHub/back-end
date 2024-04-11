@@ -1,11 +1,10 @@
 package json
 
 import (
+	"collectihub/internal/validation"
 	"collectihub/types"
 	"encoding/json"
 	"net/http"
-
-	"github.com/go-playground/validator/v10"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, message string, data interface{}) error {
@@ -54,7 +53,7 @@ func DecodeJSON(r http.Request, data interface{}) error {
 }
 
 func ValidateStruct(w http.ResponseWriter, payload interface{}) error {
-	validate := validator.New()
+	validate := validation.New()
 	err := validate.Struct(payload)
 	if err != nil {
 		return err

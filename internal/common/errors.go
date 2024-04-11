@@ -52,6 +52,11 @@ func NewValidationError(err error, model interface{}) types.HttpError {
 				messages[i] = types.DetailedError{Field: legitFieldName, Detail: fmt.Sprintf("%s must be email", err.Field())}
 			case "len":
 				messages[i] = types.DetailedError{Field: legitFieldName, Detail: fmt.Sprintf("%s must have %s in length", err.Field(), err.Param())}
+			case "upassword":
+				messages[i] = types.DetailedError{Field: legitFieldName, Detail: fmt.Sprintf(
+					"%s must be a valid password (minimum 8 lenth, 1 uppercase character, 1 lowercase character, 1 special character, 1 number)",
+					err.Field(),
+				)}
 			default:
 				messages[i] = types.DetailedError{Field: legitFieldName, Detail: fmt.Sprintf("something went wrong with %s: %s", err.Field(), err.Tag())}
 			}
