@@ -27,6 +27,45 @@ definitions:
     - new_password
     - old_password
     type: object
+  models.CreateManufacturerRequest:
+    properties:
+      description_eng:
+        example: Chinese manufacturer that is popular for Naruto collection cards
+        minLength: 6
+        type: string
+      description_ukr:
+        example: Китайський виробник, популярний за колекційні картки по Наруто
+        minLength: 6
+        type: string
+      image:
+        example: https://example.com/image.png
+        type: string
+      original_title:
+        example: Kayou
+        minLength: 4
+        type: string
+    required:
+    - original_title
+    type: object
+  models.GetManufacturerResponse:
+    properties:
+      description_eng:
+        example: Chinese manufacturer that is popular for Naruto collection cards
+        type: string
+      description_ukr:
+        example: Китайський виробник, популярний за колекційні картки по Наруто
+        type: string
+      id:
+        example: 3c1e3b82-3a29-4cc0-a4b2-4e7c4ac58052
+        format: uuid
+        type: string
+      image:
+        example: https://example.com/image.png
+        type: string
+      original_title:
+        example: Kayou
+        type: string
+    type: object
   models.GetUserResponse:
     properties:
       email:
@@ -91,9 +130,7 @@ definitions:
         example: realnaruto@gmail.com
         type: string
       password:
-        description: 'TODO: update when password is ready'
         example: k4kash1sense1
-        minLength: 8
         type: string
       username:
         example: real_naruto
@@ -103,6 +140,24 @@ definitions:
     - email
     - password
     - username
+    type: object
+  models.UpdateManufacturerRequest:
+    properties:
+      description_eng:
+        example: Chinese manufacturer that is popular for Naruto collection cards
+        minLength: 6
+        type: string
+      description_ukr:
+        example: Китайський виробник, популярний за колекційні картки по Наруто
+        minLength: 6
+        type: string
+      image:
+        example: https://example.com/image.png
+        type: string
+      original_title:
+        example: Kayou
+        minLength: 4
+        type: string
     type: object
   models.UpdateUserRequest:
     properties:
@@ -332,6 +387,160 @@ paths:
       summary: Sign up
       tags:
       - auth
+  /manufacturers:
+    get:
+      description: Helps to retrieve a list of all manufacturers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.GetManufacturerResponse'
+                  type: array
+              type: object
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get all manufacturers
+      tags:
+      - manufacturers
+    post:
+      consumes:
+      - application/json
+      description: Helps to create a new manufacturer
+      parameters:
+      - description: create manufacturer body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateManufacturerRequest'
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a manufacturer
+      tags:
+      - manufacturers
+  /manufacturers/{id}:
+    delete:
+      description: Helps to delete the existing manufacturer
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Incorrect id path
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a manufacturer
+      tags:
+      - manufacturers
+    get:
+      description: Helps to get the manufacturer with the specified id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.GetManufacturerResponse'
+              type: object
+        "400":
+          description: Incorrect id path
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Manufacturer not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get single manufacturer by id
+      tags:
+      - manufacturers
+    patch:
+      consumes:
+      - application/json
+      description: Helps to update the existing manufacturer
+      parameters:
+      - description: update manufacturer body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateManufacturerRequest'
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Incorrect id path
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a manufacturer
+      tags:
+      - manufacturers
   /users:
     delete:
       description: Helps completely delete a user and all related data

@@ -46,6 +46,7 @@ func New(cfg config.Config) *gorm.DB {
 			&models.User{},
 			&models.RefreshToken{},
 			&models.VerificationCode{},
+			&models.Manufacturer{},
 		}
 
 		for i := 0; i < len(migration_models); i++ {

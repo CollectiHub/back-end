@@ -66,17 +66,17 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, err := util.HashPassword(payload.Password)
+	hashedPassword, err := util.HashPassword(*payload.Password)
 	if err != nil {
 		json.ErrorJSON(w, constants.PasswordHashingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: err})
-		a.logger.Error().Err(err).Msgf("Error during password hashing for user (%s)", payload.Email)
+		a.logger.Error().Err(err).Msgf("Error during password hashing for user (%s)", *payload.Email)
 		return
 	}
 
 	newUser := models.User{
 		Email:    payload.Email,
 		Username: payload.Username,
-		Password: hashedPassword,
+		Password: &hashedPassword,
 	}
 
 	// Begin transaction
@@ -90,11 +90,12 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Sending verification email
 	expiration := time.Now().Add(time.Minute * 5)
+	code := util.GenerateRandomNumberString(constants.EmailVerificationCodeLength)
 	emailVerification := &models.VerificationCode{
 		UserID:  newUser.ID,
 		Expires: expiration,
 		Type:    types.EmailVerificationType,
-		Code:    util.GenerateRandomNumberString(constants.EmailVerificationCodeLength),
+		Code:    &code,
 	}
 
 	if err = a.verificationRepository.Create(emailVerification, tx); err != nil {
@@ -102,12 +103,12 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go a.mailer.SendAccountVerificationEmail(newUser.Email, emailVerification.Code)
+	go a.mailer.SendAccountVerificationEmail(*newUser.Email, *emailVerification.Code)
 
 	// Commit transaction
 	tx.Commit()
 
-	a.logger.Info().Msgf("New user (%s) was successfully created", newUser.Username)
+	a.logger.Info().Msgf("New user (%s) was successfully created", *newUser.Username)
 	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &models.GetUserResponse{
 		ID:       newUser.ID,
 		Username: newUser.Username,
@@ -173,7 +174,10 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user models.User
-	if err = a.userRepository.FindOne(&user, &models.User{OAuthProvider: "google", OAuthIndentity: data.Email}); err != nil {
+	if err = a.userRepository.FindOne(&user, &models.User{
+		OAuthProvider:  util.Pointer("google"),
+		OAuthIndentity: data.Email,
+	}); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 			return
@@ -183,10 +187,10 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// register user if account does not exist yet
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		user := models.User{
-			OAuthProvider:  "google",
+			OAuthProvider:  util.Pointer("google"),
 			OAuthIndentity: data.Email,
-			Username:       util.GenerateRandomString(10),
-			Verified:       true,
+			Username:       util.Pointer(util.GenerateRandomString(10)),
+			Verified:       util.Pointer(true),
 		}
 
 		if err = a.userRepository.Create(&user, nil); err != nil {
@@ -232,7 +236,7 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := util.VerifyPassword(user.Password, payload.Password); err != nil {
+	if err := util.VerifyPassword(*user.Password, *payload.Password); err != nil {
 		json.ErrorJSON(w, constants.IncorrectPasswordErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
@@ -269,7 +273,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Verified {
+	if *user.Verified {
 		json.ErrorJSON(w, constants.AccountIsAlreadyVerified, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
@@ -287,7 +291,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// Begin transaction
 	tx := a.userRepository.DB.Begin()
 
-	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Verified: true}, nil); err != nil {
+	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Verified: util.Pointer(true)}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
@@ -321,17 +325,18 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Verified {
+	if *user.Verified {
 		json.ErrorJSON(w, constants.AccountIsAlreadyVerified, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
 	expiration := time.Now().Add(time.Minute * 5)
+	code := util.GenerateRandomNumberString(constants.EmailVerificationCodeLength)
 	emailVerification := &models.VerificationCode{
 		UserID:  user.ID,
 		Expires: expiration,
 		Type:    types.EmailVerificationType,
-		Code:    util.GenerateRandomNumberString(constants.EmailVerificationCodeLength),
+		Code:    &code,
 	}
 
 	if err = a.verificationRepository.Create(emailVerification, nil); err != nil {
@@ -339,7 +344,7 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go a.mailer.SendAccountVerificationEmail(user.Email, emailVerification.Code)
+	go a.mailer.SendAccountVerificationEmail(*user.Email, *emailVerification.Code)
 
 	json.WriteJSON(w, http.StatusOK, "New messages was successfully sent", nil)
 }
@@ -379,11 +384,12 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	expiration := time.Now().Add(time.Minute * 5)
+	code := util.GenerateRandomNumberString(constants.PasswordresetVerificationCodeLength)
 	passwordReset := &models.VerificationCode{
 		UserID:  user.ID,
 		Expires: expiration,
 		Type:    types.PasswordResetType,
-		Code:    util.GenerateRandomNumberString(constants.PasswordresetVerificationCodeLength),
+		Code:    &code,
 	}
 
 	if err := a.verificationRepository.Create(passwordReset, nil); err != nil {
@@ -391,7 +397,7 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go a.mailer.SendPasswordResetVerificationEmail(user.Email, passwordReset.Code)
+	go a.mailer.SendPasswordResetVerificationEmail(*user.Email, *passwordReset.Code)
 
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
 }
@@ -439,7 +445,7 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPassword, err := util.HashPassword(payload.NewPassword)
+	hashedPassword, err := util.HashPassword(*payload.NewPassword)
 	if err != nil {
 		json.ErrorJSON(w, constants.PasswordHashingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
@@ -448,7 +454,7 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	// Begin transaction
 	tx := a.userRepository.DB.Begin()
 
-	err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: hashedPassword}, tx)
+	err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: &hashedPassword}, tx)
 	if err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
@@ -623,18 +629,18 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = util.VerifyPassword(user.Password, payload.OldPassword); err != nil {
+	if err = util.VerifyPassword(*user.Password, *payload.OldPassword); err != nil {
 		json.ErrorJSON(w, constants.IncorrectPasswordErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
-	hashedPassword, err := util.HashPassword(payload.NewPassword)
+	hashedPassword, err := util.HashPassword(*payload.NewPassword)
 	if err != nil {
 		json.ErrorJSON(w, constants.PasswordHashingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: nil})
 		return
 	}
 
-	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: hashedPassword}, nil); err != nil {
+	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: &hashedPassword}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
@@ -746,6 +752,6 @@ func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, set
 	}
 
 	if writeResponse {
-		json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.AccessTokenResponse{AccessToken: accessToken})
+		json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.AccessTokenResponse{AccessToken: &accessToken})
 	}
 }

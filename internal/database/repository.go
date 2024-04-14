@@ -32,6 +32,10 @@ func (r *Repository[T]) Update(find *T, update *T, tx *gorm.DB) error {
 	return r.DB.Model(&find).Updates(&update).Error
 }
 
+func (r *Repository[T]) FindAll(dest *[]T, find *T) error {
+	return r.DB.Find(&dest, &find).Error
+}
+
 func (r *Repository[T]) FindOne(dest *T, find *T) error {
 	return r.DB.First(&dest, &find).Error
 }

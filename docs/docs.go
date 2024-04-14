@@ -274,6 +274,254 @@ const docTemplate = `{
                 }
             }
         },
+        "/manufacturers": {
+            "get": {
+                "description": "Helps to retrieve a list of all manufacturers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Get all manufacturers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.GetManufacturerResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to create a new manufacturer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Create a manufacturer",
+                "parameters": [
+                    {
+                        "description": "create manufacturer body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateManufacturerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manufacturers/{id}": {
+            "get": {
+                "description": "Helps to get the manufacturer with the specified id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Get single manufacturer by id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.GetManufacturerResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Incorrect id path",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Manufacturer not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to delete the existing manufacturer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Delete a manufacturer",
+                "responses": {
+                    "400": {
+                        "description": "Incorrect id path",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to update the existing manufacturer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Update a manufacturer",
+                "parameters": [
+                    {
+                        "description": "update manufacturer body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateManufacturerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Incorrect id path",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "delete": {
                 "security": [
@@ -705,6 +953,59 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateManufacturerRequest": {
+            "type": "object",
+            "required": [
+                "original_title"
+            ],
+            "properties": {
+                "description_eng": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "Chinese manufacturer that is popular for Naruto collection cards"
+                },
+                "description_ukr": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "Китайський виробник, популярний за колекційні картки по Наруто"
+                },
+                "image": {
+                    "type": "string",
+                    "example": "https://example.com/image.png"
+                },
+                "original_title": {
+                    "type": "string",
+                    "minLength": 4,
+                    "example": "Kayou"
+                }
+            }
+        },
+        "models.GetManufacturerResponse": {
+            "type": "object",
+            "properties": {
+                "description_eng": {
+                    "type": "string",
+                    "example": "Chinese manufacturer that is popular for Naruto collection cards"
+                },
+                "description_ukr": {
+                    "type": "string",
+                    "example": "Китайський виробник, популярний за колекційні картки по Наруто"
+                },
+                "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "3c1e3b82-3a29-4cc0-a4b2-4e7c4ac58052"
+                },
+                "image": {
+                    "type": "string",
+                    "example": "https://example.com/image.png"
+                },
+                "original_title": {
+                    "type": "string",
+                    "example": "Kayou"
+                }
+            }
+        },
         "models.GetUserResponse": {
             "type": "object",
             "properties": {
@@ -801,15 +1102,37 @@ const docTemplate = `{
                     "example": "realnaruto@gmail.com"
                 },
                 "password": {
-                    "description": "TODO: update when password is ready",
                     "type": "string",
-                    "minLength": 8,
                     "example": "k4kash1sense1"
                 },
                 "username": {
                     "type": "string",
                     "minLength": 6,
                     "example": "real_naruto"
+                }
+            }
+        },
+        "models.UpdateManufacturerRequest": {
+            "type": "object",
+            "properties": {
+                "description_eng": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "Chinese manufacturer that is popular for Naruto collection cards"
+                },
+                "description_ukr": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "Китайський виробник, популярний за колекційні картки по Наруто"
+                },
+                "image": {
+                    "type": "string",
+                    "example": "https://example.com/image.png"
+                },
+                "original_title": {
+                    "type": "string",
+                    "minLength": 4,
+                    "example": "Kayou"
                 }
             }
         },

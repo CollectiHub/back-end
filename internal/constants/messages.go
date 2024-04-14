@@ -16,6 +16,7 @@ const UserDataReadingErrorMessage = "user data reading failed"
 const AccountIsAlreadyVerified = "account is already verified"
 const WrongVerificationCodeErrorMessage = "wrong verification code"
 const ForbiddenActionErrorMessage = "you are not allowed to perform this action"
+const IncorrectIdErrorMessage = "incorrect id"
 
 const SuccessMessage = "success"
 const SuccessfulTokenRefreshMessage = "tokens were successfully refreshed"

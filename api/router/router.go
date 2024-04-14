@@ -1,13 +1,13 @@
 package router
 
 import (
-	user "collectihub/api/handlers"
+	"collectihub/api/handlers/manufacturer"
+	"collectihub/api/handlers/user"
 	"collectihub/api/middleware"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
 	"collectihub/types"
 	"fmt"
-	"net/http"
 
 	_ "collectihub/docs"
 
@@ -20,34 +20,19 @@ import (
 
 func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	r := chi.NewRouter()
-	api := chi.NewRouter()
+	mainRoute := chi.NewRouter()
 	auth := middleware.NewAuthenticator(cfg, db)
 	rr := middleware.NewRoleRequirer(cfg, db)
 
 	r.Use(chiMiddleware.Recoverer)
 
-	// Users
 	userAPI := user.New(l, db, cfg)
-	api.Post("/auth/register", userAPI.SignUp)
-	api.Post("/auth/login", userAPI.SignIn)
-	api.Post("/auth/refresh-token", userAPI.RefreshAccessToken)
-	api.Post("/auth/logout", userAPI.Logout)
+	InitUserRoutes(mainRoute, userAPI, auth)
 
-	api.Get("/auth/google/login", userAPI.GoogleLogIn)
-	api.Get("/auth/google/callback", userAPI.GoogleCallback)
+	manufacturerAPI := manufacturer.New(l, db)
+	InitManufacturerRoutes(mainRoute, manufacturerAPI, rr)
 
-	api.Get("/users/me", auth.Authenticate(userAPI.GetMe))
-	api.Patch("/users", auth.Authenticate(userAPI.UpdateUser))
-	api.Patch("/users/change-password", auth.Authenticate(userAPI.ChangePassword))
-	api.Delete("/users", auth.Authenticate(userAPI.DeleteUser))
-	api.Post("/users/verify-email", auth.Authenticate(userAPI.VerifyEmail))
-	api.Post("/users/resend-verification-email", auth.Authenticate(userAPI.ResendEmailVerification))
-	api.Post("/users/request-password-reset", userAPI.SendPasswordResetEmail)
-	api.Post("/users/verify-password-reset", userAPI.PasswordReset)
-
-	api.Get("/test", rr.RequireRole(func(w http.ResponseWriter, r *http.Request) {}, types.ADMIN))
-
-	r.Mount(constants.MainRoute, api)
+	r.Mount(constants.MainRoute, mainRoute)
 
 	// Swagger
 	r.Get("/swagger/*", httpSwagger.Handler(
@@ -55,4 +40,35 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	))
 
 	return r
+}
+
+func InitUserRoutes(r *chi.Mux, api *user.API, auth *middleware.Authenticator) {
+	r.Post("/auth/register", api.SignUp)
+	r.Post("/auth/login", api.SignIn)
+	r.Post("/auth/refresh-token", api.RefreshAccessToken)
+	r.Post("/auth/logout", api.Logout)
+
+	r.Get("/auth/google/login", api.GoogleLogIn)
+	r.Get("/auth/google/callback", api.GoogleCallback)
+
+	r.Get("/users/me", auth.Authenticate(api.GetMe))
+	r.Patch("/users", auth.Authenticate(api.UpdateUser))
+	r.Patch("/users/change-password", auth.Authenticate(api.ChangePassword))
+	r.Delete("/users", auth.Authenticate(api.DeleteUser))
+	r.Post("/users/verify-email", auth.Authenticate(api.VerifyEmail))
+	r.Post("/users/resend-verification-email", auth.Authenticate(api.ResendEmailVerification))
+	r.Post("/users/request-password-reset", api.SendPasswordResetEmail)
+	r.Post("/users/verify-password-reset", api.PasswordReset)
+}
+
+func InitManufacturerRoutes(
+	r *chi.Mux,
+	api *manufacturer.API,
+	roleRequirer *middleware.RoleRequirer,
+) {
+	r.Get("/manufacturers", api.GetAll)
+	r.Get("/manufacturers/{id}", api.GetSingle)
+	r.Post("/manufacturers", roleRequirer.RequireRole(api.Create, types.ADMIN))
+	r.Patch("/manufacturers/{id}", roleRequirer.RequireRole(api.Update, types.ADMIN))
+	r.Delete("/manufacturers/{id}", roleRequirer.RequireRole(api.Delete, types.ADMIN))
 }
