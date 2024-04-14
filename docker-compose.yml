@@ -8,19 +8,11 @@ services:
     environment:
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
-      POSTGRES_DB: aya
+      POSTGRES_DB: cards_test
     ports:
       - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
-  pgadmin:
-    image: dpage/pgadmin4
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin_password
-    ports:
-      - '5050:80'
+      - dbdata:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
+  dbdata:
