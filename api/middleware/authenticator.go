@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"collectihub/api/models"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
+	"collectihub/internal/data"
 	"collectihub/internal/util"
 	"collectihub/internal/util/json"
 	"collectihub/types"
@@ -52,7 +52,7 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		var user models.User
+		var user data.User
 		if err = a.db.First(&user, "id = ?", user_id).Error; err != nil {
 			json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusForbidden, Err: nil})
 			return

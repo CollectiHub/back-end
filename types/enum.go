@@ -54,3 +54,9 @@ func (ur *UserRole) Scan(value interface{}) error {
 func (ur UserRole) Value() (driver.Value, error) {
 	return string(ur), nil
 }
+
+type HealthCheckStatus string
+
+const (
+	HEALTH_CHECK_STATUS_OK HealthCheckStatus = "ok"
+)

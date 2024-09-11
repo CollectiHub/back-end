@@ -274,6 +274,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/healthcheck": {
+            "get": {
+                "description": "Serves as route to check if server is up and running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "base"
+                ],
+                "summary": "Healthcheck",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Server is not available",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/manufacturers": {
             "get": {
                 "description": "Helps to retrieve a list of all manufacturers",

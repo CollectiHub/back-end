@@ -1,6 +1,7 @@
 package router
 
 import (
+	"collectihub/api/handlers/base"
 	"collectihub/api/handlers/manufacturer"
 	"collectihub/api/handlers/user"
 	"collectihub/api/middleware"
@@ -26,6 +27,9 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 
 	r.Use(chiMiddleware.Recoverer)
 
+	baseAPI := base.New()
+	InitBaseRoutes(mainRoute, baseAPI)
+
 	userAPI := user.New(l, db, cfg)
 	InitUserRoutes(mainRoute, userAPI, auth)
 
@@ -40,6 +44,10 @@ func New(l *zerolog.Logger, db *gorm.DB, cfg config.Config) *chi.Mux {
 	))
 
 	return r
+}
+
+func InitBaseRoutes(r *chi.Mux, api *base.API) {
+	r.Get("/healthcheck", api.HealthCheck)
 }
 
 func InitUserRoutes(r *chi.Mux, api *user.API, auth *middleware.Authenticator) {

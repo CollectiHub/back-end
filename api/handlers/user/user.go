@@ -1,11 +1,11 @@
 package user
 
 import (
-	"collectihub/api/models"
 	"collectihub/internal/auth"
 	"collectihub/internal/common"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
+	"collectihub/internal/data"
 	"collectihub/internal/database"
 	"collectihub/internal/mailer"
 	"collectihub/internal/util"
@@ -24,9 +24,9 @@ import (
 
 type API struct {
 	logger                 *zerolog.Logger
-	userRepository         *database.Repository[models.User]
-	refreshTokenRepository *database.Repository[models.RefreshToken]
-	verificationRepository *database.Repository[models.VerificationCode]
+	userRepository         *database.Repository[data.User]
+	refreshTokenRepository *database.Repository[data.RefreshToken]
+	verificationRepository *database.Repository[data.VerificationCode]
 	config                 config.Config
 	oauth                  auth.OAuthConfig
 	mailer                 *mailer.Mailer
@@ -35,9 +35,9 @@ type API struct {
 func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
 	return &API{
 		logger,
-		database.NewRepository[models.User](db),
-		database.NewRepository[models.RefreshToken](db),
-		database.NewRepository[models.VerificationCode](db),
+		database.NewRepository[data.User](db),
+		database.NewRepository[data.RefreshToken](db),
+		database.NewRepository[data.VerificationCode](db),
 		cfg,
 		auth.NewOAuth(cfg),
 		mailer.New(cfg, logger),
@@ -51,14 +51,14 @@ func New(logger *zerolog.Logger, db *gorm.DB, cfg config.Config) *API {
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.SignUpRequest	true	"sign up body"
-//	@Success		201		{object}	types.SuccessResponse{data=models.GetUserResponse}
+//	@Param			body	body		data.SignUpRequest	true	"sign up body"
+//	@Success		201		{object}	types.SuccessResponse{data=data.GetUserResponse}
 //	@Failure		400		{object}	types.ErrorResponse	"Password hashing error; Unexpected database error;"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Failure		409		{object}	types.ErrorResponse	"Username of email in from request is already taken"
 //	@Router			/auth/register [post]
 func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
-	payload := &models.SignUpRequest{}
+	payload := &data.SignUpRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -73,7 +73,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newUser := models.User{
+	newUser := data.User{
 		Email:    payload.Email,
 		Username: payload.Username,
 		Password: &hashedPassword,
@@ -91,7 +91,7 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	// Sending verification email
 	expiration := time.Now().Add(time.Minute * 5)
 	code := util.GenerateRandomNumberString(constants.EmailVerificationCodeLength)
-	emailVerification := &models.VerificationCode{
+	emailVerification := &data.VerificationCode{
 		UserID:  newUser.ID,
 		Expires: expiration,
 		Type:    types.EmailVerificationType,
@@ -109,13 +109,13 @@ func (a *API) SignUp(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	a.logger.Info().Msgf("New user (%s) was successfully created", *newUser.Username)
-	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &models.GetUserResponse{
+	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &data.GetUserResponse{
 		ID:       newUser.ID,
 		Username: newUser.Username,
 		Email:    newUser.Email,
 		Role:     newUser.Role,
 		Verified: newUser.Verified,
-	})
+	}, nil)
 }
 
 // GoogleLogin godoc
@@ -137,7 +137,7 @@ func (a *API) GoogleLogIn(w http.ResponseWriter, r *http.Request) {
 //	@Description	This endpoint will be automatically trigerred by Google with related credentials. If user with this credetials doesn't exist in database, server will automatically create a new user (with randomized username) and return auth token pair. Otherwise it will login user with auth token pair.
 //	@Tags			auth
 //	@Produce		json
-//	@Success		200	{object}	types.SuccessResponse{data=models.AccessTokenResponse}
+//	@Success		200	{object}	types.SuccessResponse{data=data.AccessTokenResponse}
 //	@Failure		400	{object}	types.ErrorResponse	"Incorrect OAuth state; OAuth exchange error; OAuth user fetching error; UserData reading error; Unexpected database error;"
 //	@Failure		422	{object}	types.ErrorResponse	"Validation error"
 //	@Router			/auth/google/callback [get]
@@ -167,16 +167,16 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := &models.GoogleUserData{}
-	if err = jsonLib.Unmarshal(userData, &data); err != nil {
+	googleUserData := &data.GoogleUserData{}
+	if err = jsonLib.Unmarshal(userData, &googleUserData); err != nil {
 		json.ErrorJSON(w, constants.JsonValidationErrorMessage, types.HttpError{Status: http.StatusUnprocessableEntity, Err: nil})
 		return
 	}
 
-	var user models.User
-	if err = a.userRepository.FindOne(&user, &models.User{
+	var user data.User
+	if err = a.userRepository.FindOne(&user, &data.User{
 		OAuthProvider:  util.Pointer("google"),
-		OAuthIndentity: data.Email,
+		OAuthIndentity: googleUserData.Email,
 	}); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
@@ -186,9 +186,9 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// register user if account does not exist yet
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		user := models.User{
+		user := data.User{
 			OAuthProvider:  util.Pointer("google"),
-			OAuthIndentity: data.Email,
+			OAuthIndentity: googleUserData.Email,
 			Username:       util.Pointer(util.GenerateRandomString(10)),
 			Verified:       util.Pointer(true),
 		}
@@ -210,14 +210,14 @@ func (a *API) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.SignInRequest	true	"sign in body"
-//	@Success		200		{object}	types.SuccessResponse{data=models.AccessTokenResponse}
+//	@Param			body	body		data.SignInRequest	true	"sign in body"
+//	@Success		200		{object}	types.SuccessResponse{data=data.AccessTokenResponse}
 //	@Failure		400		{object}	types.ErrorResponse	"Unexpected database error; Incorrect password;"
 //	@Failure		404		{object}	types.ErrorResponse	"User not found"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/auth/login [post]
 func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
-	payload := &models.SignInRequest{}
+	payload := &data.SignInRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -225,8 +225,8 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
-	if err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email}); err != nil {
+	var user data.User
+	if err := a.userRepository.FindOne(&user, &data.User{Email: payload.Email}); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		} else {
@@ -252,20 +252,20 @@ func (a *API) SignIn(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.AccountVerificationRequest	true	"account verification body"
+//	@Param			body	body		data.AccountVerificationRequest	true	"account verification body"
 //	@Success		200		{object}	types.SuccessResponse
 //	@Failure		400		{object}	types.ErrorResponse	"User is already verified; Incorrect verification code; Unexpected database error;"
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users/verify-email [post]
 func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	user, err := models.GetUserFromRequestContext(r)
+	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
 		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
-	payload := &models.AccountVerificationRequest{}
+	payload := &data.AccountVerificationRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -278,7 +278,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = a.verificationRepository.FindOne(&models.VerificationCode{}, &models.VerificationCode{
+	err = a.verificationRepository.FindOne(&data.VerificationCode{}, &data.VerificationCode{
 		UserID: user.ID,
 		Type:   types.EmailVerificationType,
 		Code:   payload.Code,
@@ -291,12 +291,12 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// Begin transaction
 	tx := a.userRepository.DB.Begin()
 
-	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Verified: util.Pointer(true)}, nil); err != nil {
+	if err = a.userRepository.Update(&data.User{ID: user.ID}, &data.User{Verified: util.Pointer(true)}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	if err = a.verificationRepository.Delete(&models.VerificationCode{}, &models.VerificationCode{UserID: user.ID}, nil); err != nil {
+	if err = a.verificationRepository.Delete(&data.VerificationCode{}, &data.VerificationCode{UserID: user.ID}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
@@ -304,7 +304,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// Commit transaction
 	tx.Commit()
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // ResendEmailVerification godoc
@@ -319,7 +319,7 @@ func (a *API) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401	{object}	types.ErrorResponse		"User is not logged in"
 //	@Router			/users/resend-verification-email [post]
 func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
-	user, err := models.GetUserFromRequestContext(r)
+	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
 		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
@@ -332,7 +332,7 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 
 	expiration := time.Now().Add(time.Minute * 5)
 	code := util.GenerateRandomNumberString(constants.EmailVerificationCodeLength)
-	emailVerification := &models.VerificationCode{
+	emailVerification := &data.VerificationCode{
 		UserID:  user.ID,
 		Expires: expiration,
 		Type:    types.EmailVerificationType,
@@ -346,7 +346,7 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 
 	go a.mailer.SendAccountVerificationEmail(*user.Email, *emailVerification.Code)
 
-	json.WriteJSON(w, http.StatusOK, "New messages was successfully sent", nil)
+	json.WriteJSON(w, http.StatusOK, "New messages was successfully sent", nil, nil)
 }
 
 // SendPasswordResetEmail godoc
@@ -356,14 +356,14 @@ func (a *API) ResendEmailVerification(w http.ResponseWriter, r *http.Request) {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.SendPasswordResetEmailRequest	true	"send password reset email body"
+//	@Param			body	body		data.SendPasswordResetEmailRequest	true	"send password reset email body"
 //	@Success		200		{object}	types.SuccessResponse					"password email reset was successfully sent"
 //	@Failure		400		{object}	types.ErrorResponse						"Unexpected database error"
 //	@Failure		404		{object}	types.ErrorResponse						"User not found"
 //	@Failure		422		{object}	types.ErrorResponse						"Validation error"
 //	@Router			/users/request-password-reset [post]
 func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
-	payload := &models.SendPasswordResetEmailRequest{}
+	payload := &data.SendPasswordResetEmailRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -371,8 +371,8 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
-	err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email})
+	var user data.User
+	err := a.userRepository.FindOne(&user, &data.User{Email: payload.Email})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
@@ -385,7 +385,7 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 
 	expiration := time.Now().Add(time.Minute * 5)
 	code := util.GenerateRandomNumberString(constants.PasswordresetVerificationCodeLength)
-	passwordReset := &models.VerificationCode{
+	passwordReset := &data.VerificationCode{
 		UserID:  user.ID,
 		Expires: expiration,
 		Type:    types.PasswordResetType,
@@ -399,7 +399,7 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 
 	go a.mailer.SendPasswordResetVerificationEmail(*user.Email, *passwordReset.Code)
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // PasswordReset godoc
@@ -409,14 +409,14 @@ func (a *API) SendPasswordResetEmail(w http.ResponseWriter, r *http.Request) {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.PasswordResetRequest	true	"password reset body"
+//	@Param			body	body		data.PasswordResetRequest	true	"password reset body"
 //	@Success		200		{object}	types.SuccessResponse
 //	@Failure		400		{object}	types.ErrorResponse	"Unexpected database error; Password hashing error;"
 //	@Failure		404		{object}	types.ErrorResponse	"User not found"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users/verify-password-reset [post]
 func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
-	payload := &models.PasswordResetRequest{}
+	payload := &data.PasswordResetRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -424,8 +424,8 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
-	err := a.userRepository.FindOne(&user, &models.User{Email: payload.Email})
+	var user data.User
+	err := a.userRepository.FindOne(&user, &data.User{Email: payload.Email})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
@@ -436,10 +436,10 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var passwordReset models.VerificationCode
+	var passwordReset data.VerificationCode
 	if err := a.verificationRepository.FindOne(
 		&passwordReset,
-		&models.VerificationCode{UserID: user.ID, Type: types.PasswordResetType, Code: payload.Code},
+		&data.VerificationCode{UserID: user.ID, Type: types.PasswordResetType, Code: payload.Code},
 	); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
@@ -454,15 +454,15 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	// Begin transaction
 	tx := a.userRepository.DB.Begin()
 
-	err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: &hashedPassword}, tx)
+	err = a.userRepository.Update(&data.User{ID: user.ID}, &data.User{Password: &hashedPassword}, tx)
 	if err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
 	err = a.verificationRepository.Delete(
-		&models.VerificationCode{},
-		&models.VerificationCode{UserID: user.ID, Type: types.PasswordResetType},
+		&data.VerificationCode{},
+		&data.VerificationCode{UserID: user.ID, Type: types.PasswordResetType},
 		tx,
 	)
 	if err != nil {
@@ -473,7 +473,7 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 	// Commit transaction
 	tx.Commit()
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // RefreshAccessToken godoc
@@ -482,7 +482,7 @@ func (a *API) PasswordReset(w http.ResponseWriter, r *http.Request) {
 //	@Description	Helps to refresh access token. Returns new access token and store refresh token in cookies. Refresh tokens are saved in database and their usage is tracked. So if refresh token is used second time, all user's refresh tokens will be wiped. This deletion will force all user's authenticated devices to log in again when access token expires.
 //	@Tags			auth
 //	@Produce		json
-//	@Success		200	{object}	types.SuccessResponse{data=models.AccessTokenResponse}
+//	@Success		200	{object}	types.SuccessResponse{data=data.AccessTokenResponse}
 //	@Failure		400	{object}	types.ErrorResponse	"Unexpected database error"
 //	@Failure		403	{object}	types.ErrorResponse	"Token processing error; Malicious activity detected;"
 //	@Failure		404	{object}	types.ErrorResponse	"User not found; Token not found;"
@@ -506,14 +506,14 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
+	var user data.User
 	if err = a.userRepository.FindOneById(&user, userID); err != nil {
 		json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		return
 	}
 
-	var refreshTokenFromDB models.RefreshToken
-	if err = a.refreshTokenRepository.FindOne(&refreshTokenFromDB, &models.RefreshToken{Token: refreshTokenFromCookie.Value, UserID: user.ID}); err != nil {
+	var refreshTokenFromDB data.RefreshToken
+	if err = a.refreshTokenRepository.FindOne(&refreshTokenFromDB, &data.RefreshToken{Token: refreshTokenFromCookie.Value, UserID: user.ID}); err != nil {
 		json.ErrorJSON(w, constants.NotFoundMessage("Token"), types.HttpError{Status: http.StatusNotFound, Err: nil})
 		return
 	}
@@ -523,7 +523,7 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	// user. It'll make anyone, who whenever had access to account, log in again
 	// when access token expires.
 	if refreshTokenFromDB.Used {
-		if err = a.refreshTokenRepository.Delete(&models.RefreshToken{}, &models.RefreshToken{UserID: user.ID}, nil); err != nil {
+		if err = a.refreshTokenRepository.Delete(&data.RefreshToken{}, &data.RefreshToken{UserID: user.ID}, nil); err != nil {
 			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 			return
 		}
@@ -534,7 +534,7 @@ func (a *API) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 
 	// If token was not used before, we mark it as used and give the user new
 	// set of tokens.
-	if err = a.refreshTokenRepository.Update(&refreshTokenFromDB, &models.RefreshToken{Used: true}, nil); err != nil {
+	if err = a.refreshTokenRepository.Update(&refreshTokenFromDB, &data.RefreshToken{Used: true}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
@@ -571,7 +571,7 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // GetMe godoc
@@ -581,23 +581,23 @@ func (a *API) Logout(w http.ResponseWriter, r *http.Request) {
 //	@Tags			users
 //	@Security		BearerAuth
 //	@Produce		json
-//	@Success		200	{object}	types.SuccessResponse{data=models.GetUserResponse}
+//	@Success		200	{object}	types.SuccessResponse{data=data.GetUserResponse}
 //	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
 //	@Router			/users/me [get]
 func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
-	user, err := models.GetUserFromRequestContext(r)
+	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
 		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.GetUserResponse{
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, data.GetUserResponse{
 		ID:       user.ID,
 		Username: user.Username,
 		Email:    user.Email,
 		Role:     user.Role,
 		Verified: user.Verified,
-	})
+	}, nil)
 }
 
 // ChangePassword godoc
@@ -608,20 +608,20 @@ func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.ChangePasswordRequest	true	"change password body"
+//	@Param			body	body		data.ChangePasswordRequest	true	"change password body"
 //	@Success		200		{object}	types.SuccessResponse
 //	@Failure		400		{object}	types.ErrorResponse	"Incorrect old password; Password hashing error; Unexpected database error;"
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users/change-password [patch]
 func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	user, err := models.GetUserFromRequestContext(r)
+	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
 		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
-	payload := &models.ChangePasswordRequest{}
+	payload := &data.ChangePasswordRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -640,12 +640,12 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Password: &hashedPassword}, nil); err != nil {
+	if err = a.userRepository.Update(&data.User{ID: user.ID}, &data.User{Password: &hashedPassword}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // UpdateUser godoc
@@ -656,20 +656,20 @@ func (a *API) ChangePassword(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.UpdateUserRequest	true	"update user body"
+//	@Param			body	body		data.UpdateUserRequest	true	"update user body"
 //	@Success		200		{object}	types.SuccessResponse
 //	@Failure		400		{object}	types.ErrorResponse	"Unexpected database error"
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Router			/users [patch]
 func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	user, err := models.GetUserFromRequestContext(r)
+	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
 		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
-	payload := &models.UpdateUserRequest{}
+	payload := &data.UpdateUserRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -677,12 +677,12 @@ func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = a.userRepository.Update(&models.User{ID: user.ID}, &models.User{Username: payload.Username, Email: payload.Email}, nil); err != nil {
+	if err = a.userRepository.Update(&data.User{ID: user.ID}, &data.User{Username: payload.Username, Email: payload.Email}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // DeleteUser godoc
@@ -697,21 +697,21 @@ func (a *API) UpdateUser(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
 //	@Router			/users [delete]
 func (a *API) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	user, err := models.GetUserFromRequestContext(r)
+	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
 		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 		return
 	}
 
-	if err = a.userRepository.DeleteOneById(&models.User{}, user.ID, nil); err != nil {
+	if err = a.userRepository.DeleteOneById(&data.User{}, user.ID, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
-func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, setCookies bool, writeResponse bool) {
+func (a *API) generateUserTokenPair(w http.ResponseWriter, user data.User, setCookies bool, writeResponse bool) {
 	accessToken, err := util.CreateToken(a.config.AccessTokenExpiresIn, user, a.config.AccessTokenPrivateKey)
 	if err != nil {
 		json.ErrorJSON(w, constants.TokenProcessingErrorMessage, types.HttpError{Status: http.StatusBadRequest, Err: err})
@@ -724,7 +724,7 @@ func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, set
 		return
 	}
 
-	a.refreshTokenRepository.Create(&models.RefreshToken{
+	a.refreshTokenRepository.Create(&data.RefreshToken{
 		Token: refreshToken,
 		User:  user,
 	}, nil)
@@ -752,6 +752,6 @@ func (a *API) generateUserTokenPair(w http.ResponseWriter, user models.User, set
 	}
 
 	if writeResponse {
-		json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.AccessTokenResponse{AccessToken: &accessToken})
+		json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, data.AccessTokenResponse{AccessToken: &accessToken}, nil)
 	}
 }

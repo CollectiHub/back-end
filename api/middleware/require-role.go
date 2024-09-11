@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"collectihub/api/models"
 	"collectihub/internal/config"
 	"collectihub/internal/constants"
+	"collectihub/internal/data"
 	"collectihub/internal/util/json"
 	"collectihub/types"
 	"net/http"
@@ -23,7 +23,7 @@ func NewRoleRequirer(config config.Config, db *gorm.DB) *RoleRequirer {
 func (rr *RoleRequirer) RequireRole(next http.HandlerFunc, role types.UserRole) http.HandlerFunc {
 	authenticator := NewAuthenticator(rr.config, rr.db)
 	return authenticator.Authenticate(func(w http.ResponseWriter, r *http.Request) {
-		user, err := models.GetUserFromRequestContext(r)
+		user, err := data.GetUserFromRequestContext(r)
 		if err != nil {
 			json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 			return

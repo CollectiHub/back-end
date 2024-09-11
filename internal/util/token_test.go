@@ -1,7 +1,7 @@
 package util
 
 import (
-	"collectihub/api/models"
+	"collectihub/internal/data"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -13,7 +13,7 @@ import (
 
 func TestCreateToken(t *testing.T) {
 	t.Run("should return error on empty privateKey", func(t *testing.T) {
-		gotValue, gotError := CreateToken(time.Minute, models.User{}, "")
+		gotValue, gotError := CreateToken(time.Minute, data.User{}, "")
 
 		if gotError == nil {
 			t.Errorf("expected error, got = %s", gotValue)
@@ -35,7 +35,7 @@ func TestCreateToken(t *testing.T) {
 		privatePEM := pem.EncodeToMemory(&privBlock)
 		encodedPrivateKey := base64.StdEncoding.EncodeToString(privatePEM)
 
-		_, gotError := CreateToken(time.Minute, models.User{}, encodedPrivateKey)
+		_, gotError := CreateToken(time.Minute, data.User{}, encodedPrivateKey)
 
 		if gotError != nil {
 			t.Errorf("expected access token, got error = %s", gotError)
@@ -58,7 +58,7 @@ func TestValidateToken(t *testing.T) {
 	privatePEM := pem.EncodeToMemory(&privBlock)
 	encodedPrivateKey := base64.StdEncoding.EncodeToString(privatePEM)
 
-	validAccessToken, err := CreateToken(time.Minute*5, models.User{}, encodedPrivateKey)
+	validAccessToken, err := CreateToken(time.Minute*5, data.User{}, encodedPrivateKey)
 	if err != nil {
 		t.Errorf("error happended during test case preparation: %s", err)
 		return

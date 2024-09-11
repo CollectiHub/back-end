@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const version = "1.0.0"
+
 //	@title			CollectiHub API
 //	@version		1.0
 //	@description	This API documentation describes endpoints and models you will face with during interaction with CollectiHub APIs
@@ -22,8 +24,8 @@ import (
 //	@in							header
 //	@name						Authorization
 
-//	@host		localhost:4000
-//	@BasePath	/api/v1
+// @host		localhost:4000
+// @BasePath	/api/v1
 func main() {
 	cfg := config.New()
 	logger := logger.New(cfg.Env == config.EnvDev)

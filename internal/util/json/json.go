@@ -7,10 +7,18 @@ import (
 	"net/http"
 )
 
-func WriteJSON(w http.ResponseWriter, status int, message string, data interface{}) error {
+func WriteJSON(w http.ResponseWriter, status int, message string, data interface{}, header http.Header) error {
+	if data == nil {
+		data = struct{}{}
+	}
+
 	js, err := json.Marshal(&types.SuccessResponse{Message: message, Data: data})
 	if err != nil {
 		return err
+	}
+
+	for key, value := range header {
+		w.Header()[key] = value
 	}
 
 	w.Header().Set("Content-Type", "application/json")

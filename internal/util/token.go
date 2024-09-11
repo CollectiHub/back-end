@@ -1,7 +1,7 @@
 package util
 
 import (
-	"collectihub/api/models"
+	"collectihub/internal/data"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -20,7 +20,7 @@ import (
 // OAuth identity, and user role.
 // Finally, the function signs the token using the RSA private key and returns the signed token.
 // If signing the token fails, an error is returned.
-func CreateToken(ttl time.Duration, payload models.User, privateKey string) (string, error) {
+func CreateToken(ttl time.Duration, payload data.User, privateKey string) (string, error) {
 	decodedPrivateKey, err := base64.StdEncoding.DecodeString(privateKey)
 	if err != nil {
 		return "", fmt.Errorf("could not decode key: %s", err)

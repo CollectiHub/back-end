@@ -1,8 +1,8 @@
 package database
 
 import (
-	"collectihub/api/models"
 	"collectihub/internal/config"
+	"collectihub/internal/data"
 	"context"
 	"log"
 	"time"
@@ -43,10 +43,10 @@ func New(cfg config.Config) *gorm.DB {
 		`)
 
 		migration_models := []interface{}{
-			&models.User{},
-			&models.RefreshToken{},
-			&models.VerificationCode{},
-			&models.Manufacturer{},
+			&data.User{},
+			&data.RefreshToken{},
+			&data.VerificationCode{},
+			&data.Manufacturer{},
 		}
 
 		for i := 0; i < len(migration_models); i++ {

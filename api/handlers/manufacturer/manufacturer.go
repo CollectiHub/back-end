@@ -1,9 +1,9 @@
 package manufacturer
 
 import (
-	"collectihub/api/models"
 	"collectihub/internal/common"
 	"collectihub/internal/constants"
+	"collectihub/internal/data"
 	"collectihub/internal/database"
 	"collectihub/internal/util/json"
 	"collectihub/types"
@@ -18,15 +18,15 @@ import (
 
 type API struct {
 	logger                 *zerolog.Logger
-	manufacturerRepository *database.Repository[models.Manufacturer]
-	userRepository         *database.Repository[models.User]
+	manufacturerRepository *database.Repository[data.Manufacturer]
+	userRepository         *database.Repository[data.User]
 }
 
 func New(logger *zerolog.Logger, db *gorm.DB) *API {
 	return &API{
 		logger,
-		database.NewRepository[models.Manufacturer](db),
-		database.NewRepository[models.User](db),
+		database.NewRepository[data.Manufacturer](db),
+		database.NewRepository[data.User](db),
 	}
 }
 
@@ -36,27 +36,28 @@ func New(logger *zerolog.Logger, db *gorm.DB) *API {
 //	@Description	Helps to retrieve a list of all manufacturers
 //	@Tags			manufacturers
 //	@Produce		json
-//	@Success		200	{object}	types.SuccessResponse{data=[]models.GetManufacturerResponse}
+//	@Success		200	{object}	types.SuccessResponse{data=[]data.GetManufacturerResponse}
 //	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
 //	@Router			/manufacturers [get]
 func (a *API) GetAll(w http.ResponseWriter, r *http.Request) {
-	var manufacturers []models.Manufacturer
-	if err := a.manufacturerRepository.FindAll(&manufacturers, &models.Manufacturer{}); err != nil {
+	var manufacturers []data.Manufacturer
+	if err := a.manufacturerRepository.FindAll(&manufacturers, &data.Manufacturer{}); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	response := make([]models.GetManufacturerResponse, len(manufacturers))
+	response := make([]data.GetManufacturerResponse, len(manufacturers))
 	for i, v := range manufacturers {
-		response[i] = models.GetManufacturerResponse{
+		response[i] = data.GetManufacturerResponse{
 			ID:             v.ID,
 			OriginalTitle:  v.OriginalTitle,
 			DescriptionEng: v.DescriptionEng,
 			DescriptionUkr: v.DescriptionUkr,
+			Image:          v.Image,
 		}
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, response)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, response, nil)
 }
 
 // GetSingle godoc
@@ -66,7 +67,7 @@ func (a *API) GetAll(w http.ResponseWriter, r *http.Request) {
 //	@Tags			manufacturers
 //	@Produce		json
 //	@Param			id	path		uuid	true	"manufacturer id"
-//	@Success		200	{object}	types.SuccessResponse{data=models.GetManufacturerResponse}
+//	@Success		200	{object}	types.SuccessResponse{data=data.GetManufacturerResponse}
 //	@Failure		400	{object}	types.ErrorResponse	"Incorrect id path"
 //	@Failure		404	{object}	types.ErrorResponse	"Manufacturer not found"
 //	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
@@ -81,7 +82,7 @@ func (a *API) GetSingle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var manufacturer models.Manufacturer
+	var manufacturer data.Manufacturer
 	if err := a.manufacturerRepository.FindOneById(&manufacturer, id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, constants.NotFoundMessage("Manufacturer"), types.HttpError{
@@ -94,12 +95,13 @@ func (a *API) GetSingle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, models.GetManufacturerResponse{
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, data.GetManufacturerResponse{
 		ID:             manufacturer.ID,
 		OriginalTitle:  manufacturer.OriginalTitle,
 		DescriptionEng: manufacturer.DescriptionEng,
 		DescriptionUkr: manufacturer.DescriptionUkr,
-	})
+		Image:          manufacturer.Image,
+	}, nil)
 }
 
 // Create godoc
@@ -110,14 +112,14 @@ func (a *API) GetSingle(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		models.CreateManufacturerRequest	true	"create manufacturer body"
+//	@Param			body	body		data.CreateManufacturerRequest	true	"create manufacturer body"
 //	@Failure		401		{object}	types.ErrorResponse					"User is not logged in"
 //	@Failure		403		{object}	types.ErrorResponse					"Action is forbidden for user of this role"
 //	@Failure		422		{object}	types.ErrorResponse					"Validation error"
 //	@Failure		500		{object}	types.ErrorResponse					"Unexpected database error"
 //	@Router			/manufacturers [post]
 func (a *API) Create(w http.ResponseWriter, r *http.Request) {
-	payload := &models.CreateManufacturerRequest{}
+	payload := &data.CreateManufacturerRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
@@ -125,10 +127,11 @@ func (a *API) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newManufacturer := models.Manufacturer{
+	newManufacturer := data.Manufacturer{
 		OriginalTitle:  payload.OriginalTitle,
 		DescriptionEng: payload.DescriptionEng,
 		DescriptionUkr: payload.DescriptionUkr,
+		Image:          payload.Image,
 	}
 
 	if err := a.manufacturerRepository.Create(&newManufacturer, nil); err != nil {
@@ -138,12 +141,13 @@ func (a *API) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.logger.Info().Msgf("New manufacturer (%s) was successfully created", *newManufacturer.OriginalTitle)
-	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &models.GetManufacturerResponse{
+	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &data.GetManufacturerResponse{
 		ID:             newManufacturer.ID,
 		OriginalTitle:  newManufacturer.OriginalTitle,
 		DescriptionEng: newManufacturer.DescriptionEng,
 		DescriptionUkr: newManufacturer.DescriptionUkr,
-	})
+		Image:          newManufacturer.Image,
+	}, nil)
 }
 
 // Update godoc
@@ -155,7 +159,7 @@ func (a *API) Create(w http.ResponseWriter, r *http.Request) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		uuid								true	"manufacturer id"
-//	@Param			body	body		models.UpdateManufacturerRequest	true	"update manufacturer body"
+//	@Param			body	body		data.UpdateManufacturerRequest	true	"update manufacturer body"
 //	@Failure		400		{object}	types.ErrorResponse					"Incorrect id path"
 //	@Failure		401		{object}	types.ErrorResponse					"User is not logged in"
 //	@Failure		403		{object}	types.ErrorResponse					"Action is forbidden for user of this role"
@@ -172,26 +176,27 @@ func (a *API) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payload := &models.UpdateManufacturerRequest{}
+	payload := &data.UpdateManufacturerRequest{}
 	json.DecodeJSON(*r, payload)
 
 	if err := json.ValidateStruct(w, payload); err != nil {
-		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewDatabaseError(err))
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
 		return
 	}
 
-	updateBody := &models.Manufacturer{
+	updateBody := &data.Manufacturer{
 		OriginalTitle:  payload.OriginalTitle,
 		DescriptionEng: payload.DescriptionEng,
 		DescriptionUkr: payload.DescriptionUkr,
+		Image:          payload.Image,
 	}
 
-	if err := a.manufacturerRepository.Update(&models.Manufacturer{ID: id}, updateBody, nil); err != nil {
+	if err := a.manufacturerRepository.Update(&data.Manufacturer{ID: id}, updateBody, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
 // Delete godoc
@@ -217,10 +222,10 @@ func (a *API) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.manufacturerRepository.Delete(&models.Manufacturer{}, &models.Manufacturer{ID: id}, nil); err != nil {
+	if err := a.manufacturerRepository.Delete(&data.Manufacturer{}, &data.Manufacturer{ID: id}, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
