@@ -4,10 +4,12 @@ import (
 	"collectihub/internal/constants"
 	"collectihub/types"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -21,6 +23,65 @@ type User struct {
 	Verified       *bool          `gorm:"type:boolean;default:false;not null"`
 	CreatedAt      time.Time      `gorm:"not null"`
 	UpdatedAt      time.Time      `gorm:"not null"`
+}
+
+type UserModel struct {
+	DB       *gorm.DB
+	InfoLog  *log.Logger
+	ErrorLog *log.Logger
+}
+
+func (m UserModel) Create(obj *User, tx *gorm.DB) error {
+	if tx != nil {
+		if err := tx.Create(&obj).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return nil
+	}
+
+	return m.DB.Create(&obj).Error
+}
+
+func (m UserModel) Update(find *User, update *User, tx *gorm.DB) error {
+	if tx != nil {
+		if err := tx.Model(&find).Updates(&update).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return nil
+	}
+
+	return m.DB.Model(&find).Updates(&update).Error
+}
+
+func (m UserModel) FindOne(find *User) (User, error) {
+	var dest User
+	err := m.DB.First(&dest, &find).Error
+
+	return dest, err
+}
+
+func (m UserModel) FindOneById(id interface{}) (User, error) {
+	var dest User
+	err := m.DB.First(&dest, "id = ?", id).Error
+
+	return dest, err
+}
+
+func (m UserModel) DeleteOneById(id interface{}, tx *gorm.DB) error {
+	if tx != nil {
+		if err := tx.Delete(&User{}, "id = ?", id).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return nil
+	}
+
+	return m.DB.Delete(&User{}, "id = ?", id).Error
 }
 
 type SignUpRequest struct {

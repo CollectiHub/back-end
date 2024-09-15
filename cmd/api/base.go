@@ -1,4 +1,4 @@
-package base
+package main
 
 import (
 	"collectihub/internal/constants"
@@ -7,12 +7,6 @@ import (
 	"collectihub/types"
 	"net/http"
 )
-
-type API struct{}
-
-func New() *API {
-	return &API{}
-}
 
 // HealthCheck godoc
 //
@@ -23,7 +17,7 @@ func New() *API {
 //	@Success		200	{object}	types.SuccessResponse{data=data.HealthCheckResponse}
 //	@Failure		500	{object}	types.ErrorResponse	"Server is not available"
 //	@Router			/healthcheck [get]
-func (a *API) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	json.WriteJSON(
 		w,
 		http.StatusOK,

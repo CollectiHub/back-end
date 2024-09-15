@@ -1,10 +1,9 @@
-package manufacturer
+package main
 
 import (
 	"collectihub/internal/common"
 	"collectihub/internal/constants"
 	"collectihub/internal/data"
-	"collectihub/internal/database"
 	"collectihub/internal/util/json"
 	"collectihub/types"
 	"errors"
@@ -12,23 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
 	"gorm.io/gorm"
 )
-
-type API struct {
-	logger                 *zerolog.Logger
-	manufacturerRepository *database.Repository[data.Manufacturer]
-	userRepository         *database.Repository[data.User]
-}
-
-func New(logger *zerolog.Logger, db *gorm.DB) *API {
-	return &API{
-		logger,
-		database.NewRepository[data.Manufacturer](db),
-		database.NewRepository[data.User](db),
-	}
-}
 
 // GetAll godoc
 //
@@ -39,9 +23,9 @@ func New(logger *zerolog.Logger, db *gorm.DB) *API {
 //	@Success		200	{object}	types.SuccessResponse{data=[]data.GetManufacturerResponse}
 //	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
 //	@Router			/manufacturers [get]
-func (a *API) GetAll(w http.ResponseWriter, r *http.Request) {
-	var manufacturers []data.Manufacturer
-	if err := a.manufacturerRepository.FindAll(&manufacturers, &data.Manufacturer{}); err != nil {
+func (app *application) getAllManufacturersHandler(w http.ResponseWriter, r *http.Request) {
+	manufacturers, err := app.models.Manufacturers.FindAll(&data.Manufacturer{})
+	if err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
@@ -72,7 +56,7 @@ func (a *API) GetAll(w http.ResponseWriter, r *http.Request) {
 //	@Failure		404	{object}	types.ErrorResponse	"Manufacturer not found"
 //	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
 //	@Router			/manufacturers/{id} [get]
-func (a *API) GetSingle(w http.ResponseWriter, r *http.Request) {
+func (app *application) getManufacturerByIdHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idFromParams)
 	if err != nil {
@@ -82,8 +66,8 @@ func (a *API) GetSingle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var manufacturer data.Manufacturer
-	if err := a.manufacturerRepository.FindOneById(&manufacturer, id); err != nil {
+	manufacturer, err := app.models.Manufacturers.FindOneById(id)
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, constants.NotFoundMessage("Manufacturer"), types.HttpError{
 				Status: 404,
@@ -118,7 +102,7 @@ func (a *API) GetSingle(w http.ResponseWriter, r *http.Request) {
 //	@Failure		422		{object}	types.ErrorResponse					"Validation error"
 //	@Failure		500		{object}	types.ErrorResponse					"Unexpected database error"
 //	@Router			/manufacturers [post]
-func (a *API) Create(w http.ResponseWriter, r *http.Request) {
+func (app *application) createManufacturerHandler(w http.ResponseWriter, r *http.Request) {
 	payload := &data.CreateManufacturerRequest{}
 	json.DecodeJSON(*r, payload)
 
@@ -134,13 +118,13 @@ func (a *API) Create(w http.ResponseWriter, r *http.Request) {
 		Image:          payload.Image,
 	}
 
-	if err := a.manufacturerRepository.Create(&newManufacturer, nil); err != nil {
+	if err := app.models.Manufacturers.Create(&newManufacturer, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
-		a.logger.Err(err).Msgf("Database error during manufacturer insertion (%v)", newManufacturer)
+		app.logger.Err(err).Msgf("Database error during manufacturer insertion (%v)", newManufacturer)
 		return
 	}
 
-	a.logger.Info().Msgf("New manufacturer (%s) was successfully created", *newManufacturer.OriginalTitle)
+	app.logger.Info().Msgf("New manufacturer (%s) was successfully created", *newManufacturer.OriginalTitle)
 	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &data.GetManufacturerResponse{
 		ID:             newManufacturer.ID,
 		OriginalTitle:  newManufacturer.OriginalTitle,
@@ -166,7 +150,7 @@ func (a *API) Create(w http.ResponseWriter, r *http.Request) {
 //	@Failure		422		{object}	types.ErrorResponse					"Validation error"
 //	@Failure		500		{object}	types.ErrorResponse					"Unexpected database error"
 //	@Router			/manufacturers/{id} [patch]
-func (a *API) Update(w http.ResponseWriter, r *http.Request) {
+func (app *application) updateManufacturerHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idFromParams)
 	if err != nil {
@@ -191,7 +175,7 @@ func (a *API) Update(w http.ResponseWriter, r *http.Request) {
 		Image:          payload.Image,
 	}
 
-	if err := a.manufacturerRepository.Update(&data.Manufacturer{ID: id}, updateBody, nil); err != nil {
+	if err := app.models.Manufacturers.Update(&data.Manufacturer{ID: id}, updateBody, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
@@ -212,7 +196,7 @@ func (a *API) Update(w http.ResponseWriter, r *http.Request) {
 //	@Failure		403	{object}	types.ErrorResponse	"Action is forbidden for user of this role"
 //	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
 //	@Router			/manufacturers/{id} [delete]
-func (a *API) Delete(w http.ResponseWriter, r *http.Request) {
+func (app *application) deleteManufacturerHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idFromParams)
 	if err != nil {
@@ -222,7 +206,7 @@ func (a *API) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.manufacturerRepository.Delete(&data.Manufacturer{}, &data.Manufacturer{ID: id}, nil); err != nil {
+	if err := app.models.Manufacturers.DeleteOneById(id, nil); err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}

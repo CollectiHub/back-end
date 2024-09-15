@@ -1,7 +1,6 @@
-package middleware
+package main
 
 import (
-	"collectihub/internal/config"
 	"collectihub/internal/constants"
 	"collectihub/internal/data"
 	"collectihub/internal/util"
@@ -10,20 +9,9 @@ import (
 	"context"
 	"net/http"
 	"strings"
-
-	"gorm.io/gorm"
 )
 
-type Authenticator struct {
-	config config.Config
-	db     *gorm.DB
-}
-
-func NewAuthenticator(config config.Config, db *gorm.DB) *Authenticator {
-	return &Authenticator{config, db}
-}
-
-func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
+func (app *application) authenticate(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var access_token string
 		cookie, cookie_err := r.Cookie(constants.AccessTokenCookie)
@@ -40,7 +28,7 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		sub, err := util.ValidateToken(access_token, a.config.AccessTokenPublicKey)
+		sub, err := util.ValidateToken(access_token, app.config.AccessTokenPublicKey)
 		if err != nil {
 			json.ErrorJSON(w, constants.TokenIsNotValidErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
 			return
@@ -52,8 +40,9 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		var user data.User
-		if err = a.db.First(&user, "id = ?", user_id).Error; err != nil {
+		user, err := app.models.Users.FindOneById(user_id)
+
+		if err != nil {
 			json.ErrorJSON(w, constants.NotFoundMessage("User"), types.HttpError{Status: http.StatusForbidden, Err: nil})
 			return
 		}
@@ -61,5 +50,22 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 		ctx := context.WithValue(r.Context(), constants.CurrentUserContext, user)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (app *application) requireRole(next http.HandlerFunc, role types.UserRole) http.HandlerFunc {
+	return app.authenticate(func(w http.ResponseWriter, r *http.Request) {
+		user, err := data.GetUserFromRequestContext(r)
+		if err != nil {
+			json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
+			return
+		}
+
+		if user.Role != role {
+			json.ErrorJSON(w, constants.ForbiddenActionErrorMessage, types.HttpError{Status: http.StatusForbidden, Err: nil})
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }

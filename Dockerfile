@@ -3,7 +3,7 @@ FROM golang:1.23.1 AS builder
 WORKDIR /app
 COPY . .
 COPY .env.docker /app/.env
-RUN go build -o api-build /app/cmd/api/main.go
+RUN go build -o api-build /app/cmd/api
 
 # The run stage
 FROM debian:stable-slim

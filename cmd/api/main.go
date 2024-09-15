@@ -1,16 +1,27 @@
 package main
 
 import (
-	"collectihub/api/router"
+	"collectihub/internal/auth"
 	"collectihub/internal/config"
+	"collectihub/internal/data"
 	"collectihub/internal/database"
+	"collectihub/internal/mailer"
 	"collectihub/internal/util/logger"
-	"fmt"
-	"net/http"
-	"time"
+	"sync"
+
+	"github.com/rs/zerolog"
 )
 
 const version = "1.0.0"
+
+type application struct {
+	config *config.Config
+	logger *zerolog.Logger
+	models data.Models
+	mailer *mailer.Mailer
+	oauth  auth.OAuthConfig
+	wg     sync.WaitGroup
+}
 
 //	@title			CollectiHub API
 //	@version		1.0
@@ -30,19 +41,19 @@ func main() {
 	cfg := config.New()
 	logger := logger.New(cfg.Env == config.EnvDev)
 	db := database.New(*cfg)
+	mailer := mailer.New(*cfg, logger)
+	oauth := auth.NewOAuth(*cfg)
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.Port),
-		Handler:      router.New(logger, db, *cfg),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+	app := &application{
+		config: cfg,
+		logger: logger,
+		models: data.NewModels(db),
+		mailer: mailer,
+		oauth:  oauth,
 	}
 
-	logger.Info().Msgf("Starting server on port %d", cfg.Port)
-
-	err := srv.ListenAndServe()
-	if err != nil {
+	// Call app.serve() to start the server.
+	if err := app.serve(); err != nil {
 		logger.Fatal().Err(err).Msg("Failed to start server")
 	}
 }

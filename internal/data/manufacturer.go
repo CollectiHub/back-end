@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Manufacturer struct {
@@ -14,6 +15,70 @@ type Manufacturer struct {
 	Image          *string   `gorm:"type:varchar(256)"`
 	CreatedAt      time.Time `gorm:"not null"`
 	UpdatedAt      time.Time `gorm:"not null"`
+}
+
+type ManufacturerModel struct {
+	DB *gorm.DB
+}
+
+func (m ManufacturerModel) Create(obj *Manufacturer, tx *gorm.DB) error {
+	if tx != nil {
+		if err := tx.Create(&obj).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return nil
+	}
+
+	return m.DB.Create(&obj).Error
+}
+
+func (m ManufacturerModel) Update(find *Manufacturer, update *Manufacturer, tx *gorm.DB) error {
+	if tx != nil {
+		if err := tx.Model(&find).Updates(&update).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return nil
+	}
+
+	return m.DB.Model(&find).Updates(&update).Error
+}
+
+func (m ManufacturerModel) FindOne(find *Manufacturer) (Manufacturer, error) {
+	var dest Manufacturer
+	err := m.DB.First(&dest, &find).Error
+
+	return dest, err
+}
+
+func (m ManufacturerModel) FindOneById(id interface{}) (Manufacturer, error) {
+	var dest Manufacturer
+	err := m.DB.First(&dest, "id = ?", id).Error
+
+	return dest, err
+}
+
+func (m ManufacturerModel) FindAll(find *Manufacturer) ([]Manufacturer, error) {
+	var dest []Manufacturer
+	err := m.DB.Find(&dest, &find).Error
+
+	return dest, err
+}
+
+func (m ManufacturerModel) DeleteOneById(id interface{}, tx *gorm.DB) error {
+	if tx != nil {
+		if err := tx.Delete(&Manufacturer{}, "id = ?", id).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		return nil
+	}
+
+	return m.DB.Delete(&Manufacturer{}, "id = ?", id).Error
 }
 
 type CreateManufacturerRequest struct {
