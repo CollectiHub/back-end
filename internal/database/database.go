@@ -27,6 +27,8 @@ func New(cfg config.Config) *gorm.DB {
 
 	if cfg.Env == config.EnvDev {
 		db.Debug().Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
+		db.Debug().Exec(`CREATE EXTENSION IF NOT EXISTS "fuzzystrmatch";`)
+		db.Debug().Exec(`CREATE EXTENSION IF NOT EXISTS "pg_trgm";`)
 		db.Debug().Exec(`
 			DO $$ BEGIN
 				CREATE TYPE user_role AS ENUM ('regular', 'admin');

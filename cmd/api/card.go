@@ -258,3 +258,27 @@ func (app *application) updateCollectionInfoHandler(w http.ResponseWriter, r *ht
 		CardsCollected: ownedCount,
 	}, nil)
 }
+
+func (app *application) searchCardsWithTermHandler(w http.ResponseWriter, r *http.Request) {
+	term := r.URL.Query().Get("term")
+	user, err := data.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
+		return
+	}
+
+	if term == "" {
+		json.ErrorJSON(w, constants.RarityIsRequiredErrorMessage, types.HttpError{
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	cards, err := app.models.Cards.SearchCardsWithTerm(user.ID.String(), term)
+	if err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, cards, nil)
+}
