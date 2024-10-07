@@ -19,12 +19,6 @@ type Card struct {
 	UpdatedAt     time.Time `gorm:"not null"`
 }
 
-type CollectionCardInfo struct {
-	CardID uuid.UUID                  `gorm:"type:uuid;primaryKey"`
-	UserID uuid.UUID                  `gorm:"type:uuid;primaryKey"`
-	Status types.CollectionCardStatus `gorm:"type:collection_card_status;not null"`
-}
-
 type CardModel struct {
 	DB     *gorm.DB
 	logger *zerolog.Logger
@@ -88,6 +82,22 @@ func (m CardModel) GetTotalCount() (int64, error) {
 	return count, nil
 }
 
+func (m CardModel) GetCollectedCount(userID string) (int64, error) {
+	var count int64
+	if err := m.DB.Model(&Card{}).Joins(
+		"join collection_card_infos cci on cards.id = cci.card_id",
+	).Where(
+		"cci.user_id::text = ? and cci.status = ?",
+		userID,
+		types.CardCollected,
+	).Count(&count).Error; err != nil {
+		m.logger.Err(err).Msg("failed to get count of owned cards")
+		return 0, err
+	}
+
+	return count, nil
+}
+
 // Get all cards by rarity
 func (m CardModel) FindAllByRarity(rarity string) ([]Card, error) {
 	var dest []Card
@@ -117,37 +127,6 @@ func (m CardModel) DeleteOneById(id interface{}, tx *gorm.DB) error {
 	}
 
 	return m.DB.Delete(&Card{}, "id = ?", id).Error
-}
-
-type CollectionCardInfoModel struct {
-	DB     *gorm.DB
-	logger *zerolog.Logger
-}
-
-func (m CollectionCardInfoModel) Create(obj *CollectionCardInfo, tx *gorm.DB) error {
-	if tx != nil {
-		if err := tx.Create(&obj).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		return nil
-	}
-
-	return m.DB.Create(&obj).Error
-}
-
-func (m CollectionCardInfoModel) Update(find *CollectionCardInfo, update *Card, tx *gorm.DB) error {
-	if tx != nil {
-		if err := tx.Model(&find).Updates(&update).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		return nil
-	}
-
-	return m.DB.Model(&find).Updates(&update).Error
 }
 
 type CreateCardRequest struct {

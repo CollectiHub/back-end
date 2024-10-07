@@ -58,8 +58,8 @@ func (ur UserRole) Value() (driver.Value, error) {
 type CollectionCardStatus string
 
 const (
-	CardCollected    UserRole = "collected"
-	CardNotCollected UserRole = "not_collected"
+	CardCollected    CollectionCardStatus = "collected"
+	CardNotCollected CollectionCardStatus = "not_collected"
 )
 
 func (ccs *CollectionCardStatus) Scan(value interface{}) error {

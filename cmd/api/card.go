@@ -173,7 +173,13 @@ func (app *application) deleteCardByIdHandler(w http.ResponseWriter, r *http.Req
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
-func (app *application) getAllRaritiesHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) getCollectionInfoHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := data.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
+		return
+	}
+
 	rarities, err := app.models.Cards.GetAllRarities()
 	if err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
@@ -186,10 +192,16 @@ func (app *application) getAllRaritiesHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	ownedCount, err := app.models.Cards.GetCollectedCount(user.ID.String())
+	if err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, data.GetCollectionInfoResponse{
 		Rarities:       rarities,
 		CardsTotal:     totalCount,
-		CardsCollected: totalCount,
+		CardsCollected: ownedCount,
 	}, nil)
 }
 
@@ -221,4 +233,34 @@ func (app *application) getAllCardsByRarityHandler(w http.ResponseWriter, r *htt
 	}
 
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, response, nil)
+}
+
+func (app *application) updateCollectionInfoHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := data.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
+		return
+	}
+
+	payload := &data.UpdateCollectionRequest{}
+	json.DecodeJSON(*r, payload)
+
+	if err = app.models.CollectionCardInfos.UpdateAllByUserIDAndCardIDs(
+		user.ID.String(),
+		payload.Ids,
+		payload.Change.Status, nil,
+	); err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	ownedCount, err := app.models.Cards.GetCollectedCount(user.ID.String())
+	if err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, data.UpdateCollectionResponse{
+		CardsCollected: ownedCount,
+	}, nil)
 }

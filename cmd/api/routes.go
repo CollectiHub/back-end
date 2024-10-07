@@ -54,8 +54,9 @@ func (app *application) routes() http.Handler {
 	r.Get("/cards/by-id/{id}", app.getCardByIdHandler)
 	r.Patch("/cards/by-id/{id}", app.requireRole(app.updateCardHandler, types.ADMIN))
 	r.Delete("/cards/by-id/{id}", app.requireRole(app.deleteCardByIdHandler, types.ADMIN))
-	r.Get("/collection/info", app.getAllRaritiesHandler)
-	r.Get("/collection/get-by-rarity", app.getAllCardsByRarityHandler)
+	r.Get("/collection/info", app.authenticate(app.getCollectionInfoHandler))
+	r.Patch("/collection/update", app.authenticate(app.updateCollectionInfoHandler))
+	r.Get("/collection/get-by-rarity", app.authenticate(app.getAllCardsByRarityHandler))
 
 	router.Mount(constants.MainRoute, r)
 

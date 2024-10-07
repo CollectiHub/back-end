@@ -6,11 +6,12 @@ import (
 )
 
 type Models struct {
-	Users             UserModel
-	VerificationCodes VerificationCodeModel
-	RefreshTokens     RefreshTokenModel
-	Manufacturers     ManufacturerModel
-	Cards             CardModel
+	Users               UserModel
+	VerificationCodes   VerificationCodeModel
+	RefreshTokens       RefreshTokenModel
+	Manufacturers       ManufacturerModel
+	Cards               CardModel
+	CollectionCardInfos CollectionCardInfoModel
 }
 
 func NewModels(db *gorm.DB, logger *zerolog.Logger) Models {
@@ -28,6 +29,10 @@ func NewModels(db *gorm.DB, logger *zerolog.Logger) Models {
 			DB: db,
 		},
 		Cards: CardModel{
+			DB:     db,
+			logger: logger,
+		},
+		CollectionCardInfos: CollectionCardInfoModel{
 			DB:     db,
 			logger: logger,
 		},
