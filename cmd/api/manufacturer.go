@@ -70,7 +70,7 @@ func (app *application) getManufacturerByIdHandler(w http.ResponseWriter, r *htt
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			json.ErrorJSON(w, constants.NotFoundMessage("Manufacturer"), types.HttpError{
-				Status: 404,
+				Status: http.StatusNotFound,
 			})
 		} else {
 			json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
@@ -97,10 +97,10 @@ func (app *application) getManufacturerByIdHandler(w http.ResponseWriter, r *htt
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		data.CreateManufacturerRequest	true	"create manufacturer body"
-//	@Failure		401		{object}	types.ErrorResponse					"User is not logged in"
-//	@Failure		403		{object}	types.ErrorResponse					"Action is forbidden for user of this role"
-//	@Failure		422		{object}	types.ErrorResponse					"Validation error"
-//	@Failure		500		{object}	types.ErrorResponse					"Unexpected database error"
+//	@Failure		401		{object}	types.ErrorResponse				"User is not logged in"
+//	@Failure		403		{object}	types.ErrorResponse				"Action is forbidden for user of this role"
+//	@Failure		422		{object}	types.ErrorResponse				"Validation error"
+//	@Failure		500		{object}	types.ErrorResponse				"Unexpected database error"
 //	@Router			/manufacturers [post]
 func (app *application) createManufacturerHandler(w http.ResponseWriter, r *http.Request) {
 	payload := &data.CreateManufacturerRequest{}
@@ -142,13 +142,13 @@ func (app *application) createManufacturerHandler(w http.ResponseWriter, r *http
 //	@Security		BearerAuth
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		uuid								true	"manufacturer id"
+//	@Param			id		path		uuid							true	"manufacturer id"
 //	@Param			body	body		data.UpdateManufacturerRequest	true	"update manufacturer body"
-//	@Failure		400		{object}	types.ErrorResponse					"Incorrect id path"
-//	@Failure		401		{object}	types.ErrorResponse					"User is not logged in"
-//	@Failure		403		{object}	types.ErrorResponse					"Action is forbidden for user of this role"
-//	@Failure		422		{object}	types.ErrorResponse					"Validation error"
-//	@Failure		500		{object}	types.ErrorResponse					"Unexpected database error"
+//	@Failure		400		{object}	types.ErrorResponse				"Incorrect id path"
+//	@Failure		401		{object}	types.ErrorResponse				"User is not logged in"
+//	@Failure		403		{object}	types.ErrorResponse				"Action is forbidden for user of this role"
+//	@Failure		422		{object}	types.ErrorResponse				"Validation error"
+//	@Failure		500		{object}	types.ErrorResponse				"Unexpected database error"
 //	@Router			/manufacturers/{id} [patch]
 func (app *application) updateManufacturerHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")

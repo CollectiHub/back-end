@@ -1,15 +1,19 @@
 package data
 
-import "gorm.io/gorm"
+import (
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
+)
 
 type Models struct {
 	Users             UserModel
 	VerificationCodes VerificationCodeModel
 	RefreshTokens     RefreshTokenModel
 	Manufacturers     ManufacturerModel
+	Cards             CardModel
 }
 
-func NewModels(db *gorm.DB) Models {
+func NewModels(db *gorm.DB, logger *zerolog.Logger) Models {
 	return Models{
 		Users: UserModel{
 			DB: db,
@@ -22,6 +26,10 @@ func NewModels(db *gorm.DB) Models {
 		},
 		Manufacturers: ManufacturerModel{
 			DB: db,
+		},
+		Cards: CardModel{
+			DB:     db,
+			logger: logger,
 		},
 	}
 }

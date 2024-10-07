@@ -40,7 +40,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.AccessTokenResponse"
+                                            "$ref": "#/definitions/data.AccessTokenResponse"
                                         }
                                     }
                                 }
@@ -96,7 +96,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.SignInRequest"
+                            "$ref": "#/definitions/data.SignInRequest"
                         }
                     }
                 ],
@@ -112,7 +112,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.AccessTokenResponse"
+                                            "$ref": "#/definitions/data.AccessTokenResponse"
                                         }
                                     }
                                 }
@@ -182,7 +182,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.AccessTokenResponse"
+                                            "$ref": "#/definitions/data.AccessTokenResponse"
                                         }
                                     }
                                 }
@@ -230,7 +230,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.SignUpRequest"
+                            "$ref": "#/definitions/data.SignUpRequest"
                         }
                     }
                 ],
@@ -246,7 +246,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.GetUserResponse"
+                                            "$ref": "#/definitions/data.GetUserResponse"
                                         }
                                     }
                                 }
@@ -274,6 +274,102 @@ const docTemplate = `{
                 }
             }
         },
+        "/cards": {
+            "get": {
+                "description": "Helps to retrieve a list of all cards",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Get all cards",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/data.GetCardResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to create a new card",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Create a card",
+                "parameters": [
+                    {
+                        "description": "create card body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/data.CreateCardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/healthcheck": {
             "get": {
                 "description": "Serves as route to check if server is up and running",
@@ -288,7 +384,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/types.SuccessResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.HealthCheckResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
@@ -324,7 +432,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.GetManufacturerResponse"
+                                                "$ref": "#/definitions/data.GetManufacturerResponse"
                                             }
                                         }
                                     }
@@ -364,7 +472,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateManufacturerRequest"
+                            "$ref": "#/definitions/data.CreateManufacturerRequest"
                         }
                     }
                 ],
@@ -418,7 +526,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.GetManufacturerResponse"
+                                            "$ref": "#/definitions/data.GetManufacturerResponse"
                                         }
                                     }
                                 }
@@ -510,7 +618,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.UpdateManufacturerRequest"
+                            "$ref": "#/definitions/data.UpdateManufacturerRequest"
                         }
                     }
                 ],
@@ -608,7 +716,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.UpdateUserRequest"
+                            "$ref": "#/definitions/data.UpdateUserRequest"
                         }
                     }
                 ],
@@ -665,7 +773,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.ChangePasswordRequest"
+                            "$ref": "#/definitions/data.ChangePasswordRequest"
                         }
                     }
                 ],
@@ -724,7 +832,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.GetUserResponse"
+                                            "$ref": "#/definitions/data.GetUserResponse"
                                         }
                                     }
                                 }
@@ -760,7 +868,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.SendPasswordResetEmailRequest"
+                            "$ref": "#/definitions/data.SendPasswordResetEmailRequest"
                         }
                     }
                 ],
@@ -854,7 +962,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AccountVerificationRequest"
+                            "$ref": "#/definitions/data.AccountVerificationRequest"
                         }
                     }
                 ],
@@ -906,7 +1014,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.PasswordResetRequest"
+                            "$ref": "#/definitions/data.PasswordResetRequest"
                         }
                     }
                 ],
@@ -940,7 +1048,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.AccessTokenResponse": {
+        "data.AccessTokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -948,7 +1056,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.AccountVerificationRequest": {
+        "data.AccountVerificationRequest": {
             "type": "object",
             "required": [
                 "code"
@@ -960,7 +1068,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ChangePasswordRequest": {
+        "data.ChangePasswordRequest": {
             "type": "object",
             "required": [
                 "new_password",
@@ -979,7 +1087,37 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateManufacturerRequest": {
+        "data.CreateCardRequest": {
+            "type": "object",
+            "required": [
+                "rarity",
+                "serial_number"
+            ],
+            "properties": {
+                "character_name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 2,
+                    "example": "Hatake Kakashi"
+                },
+                "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "rarity": {
+                    "type": "string",
+                    "maxLength": 12,
+                    "example": "SSR"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "example": "SE-014"
+                }
+            }
+        },
+        "data.CreateManufacturerRequest": {
             "type": "object",
             "required": [
                 "original_title"
@@ -1006,7 +1144,32 @@ const docTemplate = `{
                 }
             }
         },
-        "models.GetManufacturerResponse": {
+        "data.GetCardResponse": {
+            "type": "object",
+            "properties": {
+                "character_name": {
+                    "type": "string",
+                    "example": "Hatake Kakashi"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "rarity": {
+                    "type": "string",
+                    "example": "SSR"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "example": "SE-014"
+                }
+            }
+        },
+        "data.GetManufacturerResponse": {
             "type": "object",
             "properties": {
                 "description_eng": {
@@ -1032,7 +1195,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.GetUserResponse": {
+        "data.GetUserResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1062,7 +1225,24 @@ const docTemplate = `{
                 }
             }
         },
-        "models.PasswordResetRequest": {
+        "data.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.HealthCheckStatus"
+                        }
+                    ],
+                    "example": "ok"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
+        "data.PasswordResetRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -1085,7 +1265,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.SendPasswordResetEmailRequest": {
+        "data.SendPasswordResetEmailRequest": {
             "type": "object",
             "required": [
                 "email"
@@ -1097,7 +1277,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.SignInRequest": {
+        "data.SignInRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -1115,7 +1295,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.SignUpRequest": {
+        "data.SignUpRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -1138,7 +1318,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UpdateManufacturerRequest": {
+        "data.UpdateManufacturerRequest": {
             "type": "object",
             "properties": {
                 "description_eng": {
@@ -1162,7 +1342,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UpdateUserRequest": {
+        "data.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1207,6 +1387,15 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "types.HealthCheckStatus": {
+            "type": "string",
+            "enum": [
+                "ok"
+            ],
+            "x-enum-varnames": [
+                "HEALTH_CHECK_STATUS_OK"
+            ]
         },
         "types.SuccessResponse": {
             "type": "object",

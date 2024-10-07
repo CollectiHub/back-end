@@ -96,7 +96,7 @@ func (app *application) signUpHandler(w http.ResponseWriter, r *http.Request) {
 //	@Summary		Google login
 //	@Description	Used to login/register with Google account, user will be redirected to Google's OAuth page.
 //	@Tags			auth
-//	@Success		303 "Redirected"
+//	@Success		303	"Redirected"
 //	@Router			/auth/google/login [get]
 func (app *application) googleLoginHandler(w http.ResponseWriter, r *http.Request) {
 	url := app.oauth.GoogleLoginConfig.AuthCodeURL(app.config.GoogleState)
@@ -332,10 +332,10 @@ func (app *application) resendEmailVerificationHandler(w http.ResponseWriter, r 
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		data.SendPasswordResetEmailRequest	true	"send password reset email body"
-//	@Success		200		{object}	types.SuccessResponse					"password email reset was successfully sent"
-//	@Failure		400		{object}	types.ErrorResponse						"Unexpected database error"
-//	@Failure		404		{object}	types.ErrorResponse						"User not found"
-//	@Failure		422		{object}	types.ErrorResponse						"Validation error"
+//	@Success		200		{object}	types.SuccessResponse				"password email reset was successfully sent"
+//	@Failure		400		{object}	types.ErrorResponse					"Unexpected database error"
+//	@Failure		404		{object}	types.ErrorResponse					"User not found"
+//	@Failure		422		{object}	types.ErrorResponse					"Validation error"
 //	@Router			/users/request-password-reset [post]
 func (app *application) sendPasswordResetEmailHandler(w http.ResponseWriter, r *http.Request) {
 	payload := &data.SendPasswordResetEmailRequest{}

@@ -55,6 +55,31 @@ func (ur UserRole) Value() (driver.Value, error) {
 	return string(ur), nil
 }
 
+type CollectionCardStatus string
+
+const (
+	CardCollected    UserRole = "collected"
+	CardNotCollected UserRole = "not_collected"
+)
+
+func (ccs *CollectionCardStatus) Scan(value interface{}) error {
+	if v, ok := value.(string); ok {
+		*ccs = CollectionCardStatus(v)
+		return nil
+	}
+
+	if v, ok := value.([]byte); ok {
+		*ccs = CollectionCardStatus(v)
+		return nil
+	}
+
+	return errors.New("value scanning error")
+}
+
+func (ccs CollectionCardStatus) Value() (driver.Value, error) {
+	return string(ccs), nil
+}
+
 type HealthCheckStatus string
 
 const (

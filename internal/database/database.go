@@ -41,12 +41,21 @@ func New(cfg config.Config) *gorm.DB {
 				WHEN duplicate_object THEN null;
 			END $$;
 		`)
+		db.Debug().Exec(`
+			DO $$ BEGIN
+				CREATE TYPE collection_card_status AS ENUM ('collected', 'not-collected');
+			EXCEPTION
+				WHEN duplicate_object THEN null;
+			END $$;
+		`)
 
 		migration_models := []interface{}{
 			&data.User{},
 			&data.RefreshToken{},
 			&data.VerificationCode{},
 			&data.Manufacturer{},
+			&data.Card{},
+			&data.CollectionCardInfo{},
 		}
 
 		for i := 0; i < len(migration_models); i++ {

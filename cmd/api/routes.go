@@ -48,6 +48,15 @@ func (app *application) routes() http.Handler {
 	r.Patch("/manufacturers/{id}", app.requireRole(app.updateManufacturerHandler, types.ADMIN))
 	r.Delete("/manufacturers/{id}", app.requireRole(app.deleteManufacturerHandler, types.ADMIN))
 
+	// Cards
+	r.Post("/cards", app.requireRole(app.createCardHandler, types.ADMIN))
+	r.Get("/cards", app.getAllCardsHandler)
+	r.Get("/cards/by-id/{id}", app.getCardByIdHandler)
+	r.Patch("/cards/by-id/{id}", app.requireRole(app.updateCardHandler, types.ADMIN))
+	r.Delete("/cards/by-id/{id}", app.requireRole(app.deleteCardByIdHandler, types.ADMIN))
+	r.Get("/collection/info", app.getAllRaritiesHandler)
+	r.Get("/collection/get-by-rarity", app.getAllCardsByRarityHandler)
+
 	router.Mount(constants.MainRoute, r)
 
 	return router
