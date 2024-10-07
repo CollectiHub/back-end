@@ -207,6 +207,11 @@ func (app *application) getCollectionInfoHandler(w http.ResponseWriter, r *http.
 
 func (app *application) getAllCardsByRarityHandler(w http.ResponseWriter, r *http.Request) {
 	rarity := r.URL.Query().Get("rarity")
+	user, err := data.GetUserFromRequestContext(r)
+	if err != nil {
+		json.ErrorJSON(w, constants.NotLoggedInErrorMessage, types.HttpError{Status: http.StatusUnauthorized, Err: nil})
+		return
+	}
 
 	if rarity == "" {
 		json.ErrorJSON(w, constants.RarityIsRequiredErrorMessage, types.HttpError{
@@ -215,24 +220,13 @@ func (app *application) getAllCardsByRarityHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	cards, err := app.models.Cards.FindAll(&data.Card{Rarity: &rarity})
+	cards, err := app.models.Cards.FindAllOwnedByRarity(user.ID.String(), rarity)
 	if err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
 	}
 
-	response := make([]data.GetCardResponse, 0)
-	for _, card := range cards {
-		response = append(response, data.GetCardResponse{
-			ID:            card.ID,
-			Rarity:        card.Rarity,
-			CharacterName: card.CharacterName,
-			SerialNumber:  card.SerialNumber,
-			ImageUrl:      card.ImageUrl,
-		})
-	}
-
-	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, response, nil)
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, cards, nil)
 }
 
 func (app *application) updateCollectionInfoHandler(w http.ResponseWriter, r *http.Request) {

@@ -99,12 +99,25 @@ func (m CardModel) GetCollectedCount(userID string) (int64, error) {
 }
 
 // Get all cards by rarity
-func (m CardModel) FindAllByRarity(rarity string) ([]Card, error) {
-	var dest []Card
-	if err := m.DB.Find(&dest, "rarity = ?", rarity).Error; err != nil {
+func (m CardModel) FindAllOwnedByRarity(userID string, rarity string) ([]GetOwnedCardResponse, error) {
+	var dest []GetOwnedCardResponse
+	if err := m.DB.Model(&Card{}).Select(
+		"cards.id as id, cards.rarity as rarity, cards.character_name as character_name, cards.serial_number as serial_number, cards.image_url as image_url, COALESCE(cci.status, ?) as status",
+		types.CardNotCollected,
+	).Joins(
+		"left join collection_card_infos cci on cards.id = cci.card_id and cci.user_id::text = ?",
+		userID,
+	).Where(
+		"cards.rarity = ?",
+		rarity,
+	).Scan(&dest).Error; err != nil {
 		m.logger.Err(err).Msg("failed to get all cards by rarity")
 		return nil, err
 	}
+	// if err := m.DB.Find(&dest, "rarity = ?", rarity).Error; err != nil {
+	// 	m.logger.Err(err).Msg("failed to get all cards by rarity")
+	// 	return nil, err
+	// }
 
 	return dest, nil
 }
@@ -149,6 +162,15 @@ type GetCardResponse struct {
 	CharacterName *string   `json:"character_name" example:"Hatake Kakashi"`
 	SerialNumber  *string   `json:"serial_number" example:"SE-014"`
 	ImageUrl      *string   `json:"image_url" example:"https://example.com/image.jpg"`
+}
+
+type GetOwnedCardResponse struct {
+	ID            uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Rarity        *string   `json:"rarity" example:"SSR"`
+	CharacterName *string   `json:"character_name" example:"Hatake Kakashi"`
+	SerialNumber  *string   `json:"serial_number" example:"SE-014"`
+	ImageUrl      *string   `json:"image_url" example:"https://example.com/image.jpg"`
+	Status        *string   `json:"status" example:"collected"`
 }
 
 type GetCollectionInfoResponse struct {

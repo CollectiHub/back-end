@@ -59,7 +59,7 @@ type CollectionCardStatus string
 
 const (
 	CardCollected    CollectionCardStatus = "collected"
-	CardNotCollected CollectionCardStatus = "not_collected"
+	CardNotCollected CollectionCardStatus = "not-collected"
 )
 
 func (ccs *CollectionCardStatus) Scan(value interface{}) error {
