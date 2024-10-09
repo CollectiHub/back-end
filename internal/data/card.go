@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Card struct {
@@ -122,14 +121,20 @@ func (m CardModel) FindAllOwnedByRarity(userID string, rarity string) ([]GetOwne
 func (m CardModel) SearchCardsWithTerm(userID string, term string) ([]GetOwnedCardResponse, error) {
 	var dest []GetOwnedCardResponse
 	if err := m.DB.Model(&Card{}).Select(
-		"cards.id as id, cards.rarity as rarity, cards.character_name as character_name, cards.serial_number as serial_number, cards.image_url as image_url, COALESCE(cci.status, ?) as status",
+		"cards.id as id, cards.rarity as rarity, cards.character_name as character_name, "+
+			"cards.serial_number as serial_number, cards.image_url as image_url, COALESCE(cci.status, ?) as status, "+
+			"similarity(serial_number, ?) + similarity(character_name, ?) as search_similarity",
 		types.CardNotCollected,
+		term, term,
 	).Joins(
 		"left join collection_card_infos cci on cards.id = cci.card_id and cci.user_id::text = ?",
 		userID,
-	).Order(clause.OrderBy{
-		Expression: clause.Expr{SQL: "similarity(serial_number, ?)", Vars: []interface{}{term}},
-	}).Limit(5).Scan(&dest).Error; err != nil {
+	).Order(
+		"search_similarity desc",
+	).Where(
+		"similarity(serial_number, ?) + similarity(character_name, ?) > 0.4",
+		term, term,
+	).Limit(5).Scan(&dest).Error; err != nil {
 		m.logger.Err(err).Msg("failed to get all cards by search term")
 		return nil, err
 	}
