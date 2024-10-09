@@ -343,6 +343,87 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.GetCardResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cards/by-id/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to update an existing card",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Update a card",
+                "parameters": [
+                    {
+                        "description": "update card body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/data.UpdateCardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
                     "401": {
                         "description": "User is not logged in",
                         "schema": {
@@ -623,6 +704,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
                     "400": {
                         "description": "Incorrect id path",
                         "schema": {
@@ -1090,8 +1177,7 @@ const docTemplate = `{
         "data.CreateCardRequest": {
             "type": "object",
             "required": [
-                "rarity",
-                "serial_number"
+                "rarity"
             ],
             "properties": {
                 "character_name": {
@@ -1112,7 +1198,6 @@ const docTemplate = `{
                 "serial_number": {
                     "type": "string",
                     "maxLength": 64,
-                    "minLength": 1,
                     "example": "SE-014"
                 }
             }
@@ -1315,6 +1400,31 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 6,
                     "example": "real_naruto"
+                }
+            }
+        },
+        "data.UpdateCardRequest": {
+            "type": "object",
+            "properties": {
+                "character_name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 2,
+                    "example": "Hatake Kakashi"
+                },
+                "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "rarity": {
+                    "type": "string",
+                    "maxLength": 12,
+                    "example": "SSR"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "SE-014"
                 }
             }
         },

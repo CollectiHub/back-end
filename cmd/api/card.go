@@ -23,10 +23,11 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		data.CreateCardRequest	true	"create card body"
-//	@Failure		401		{object}	types.ErrorResponse		"User is not logged in"
-//	@Failure		403		{object}	types.ErrorResponse		"Action is forbidden for user of this role"
-//	@Failure		422		{object}	types.ErrorResponse		"Validation error"
-//	@Failure		500		{object}	types.ErrorResponse		"Unexpected database error"
+//	@Success		201		{object}	types.SuccessResponse{data=data.GetCardResponse}
+//	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		403		{object}	types.ErrorResponse	"Action is forbidden for user of this role"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
+//	@Failure		500		{object}	types.ErrorResponse	"Unexpected database error"
 //	@Router			/cards [post]
 func (app *application) createCardHandler(w http.ResponseWriter, r *http.Request) {
 	payload := &data.CreateCardRequest{}
@@ -90,6 +91,22 @@ func (app *application) getAllCardsHandler(w http.ResponseWriter, _ *http.Reques
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, response, nil)
 }
 
+// Update godoc
+//
+//	@Summary		Update a card
+//	@Description	Helps to update an existing card
+//	@Tags			cards
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		data.UpdateCardRequest	true	"update card body"
+//	@Param			id		path		uuid					true	"card id"
+//	@Success		200		{object}	types.SuccessResponse
+//	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		403		{object}	types.ErrorResponse	"Action is forbidden for user of this role"
+//	@Failure		422		{object}	types.ErrorResponse	"Validation error"
+//	@Failure		500		{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/cards/by-id/{id} [patch]
 func (app *application) updateCardHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idFromParams)

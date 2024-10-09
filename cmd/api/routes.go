@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	_ "collectihub/docs"
+
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -20,7 +22,7 @@ func (app *application) routes() http.Handler {
 	// Base handlers
 	r.Get("/healthcheck", app.healthCheckHandler)
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("%s/swagger/doc.json", app.config.BaseUrl)),
+		httpSwagger.URL(fmt.Sprintf("%s/%s/swagger/doc.json", app.config.BaseUrl, constants.MainRoute)),
 	))
 
 	// User handlers
@@ -59,7 +61,7 @@ func (app *application) routes() http.Handler {
 	r.Get("/collection/get-by-rarity", app.authenticate(app.getAllCardsByRarityHandler))
 	r.Get("/collection/search", app.authenticate(app.searchCardsWithTermHandler))
 
-	router.Mount(constants.MainRoute, r)
+	router.Mount(fmt.Sprintf("/%s", constants.MainRoute), r)
 
 	return router
 }

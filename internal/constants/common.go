@@ -10,7 +10,7 @@ type ContextKey string
 const CurrentUserContext = ContextKey("currentUser")
 
 // Api routes
-const MainRoute = "/api/v1"
+const MainRoute = "api/v1"
 
 // Codes
 const EmailVerificationCodeLength = 5

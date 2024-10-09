@@ -44,11 +44,9 @@ definitions:
       serial_number:
         example: SE-014
         maxLength: 64
-        minLength: 1
         type: string
     required:
     - rarity
-    - serial_number
     type: object
   data.CreateManufacturerRequest:
     properties:
@@ -191,6 +189,25 @@ definitions:
     - email
     - password
     - username
+    type: object
+  data.UpdateCardRequest:
+    properties:
+      character_name:
+        example: Hatake Kakashi
+        maxLength: 64
+        minLength: 2
+        type: string
+      image_url:
+        example: https://example.com/image.jpg
+        type: string
+      rarity:
+        example: SSR
+        maxLength: 12
+        type: string
+      serial_number:
+        example: SE-014
+        maxLength: 64
+        type: string
     type: object
   data.UpdateManufacturerRequest:
     properties:
@@ -482,6 +499,15 @@ paths:
       produces:
       - application/json
       responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.GetCardResponse'
+              type: object
         "401":
           description: User is not logged in
           schema:
@@ -501,6 +527,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Create a card
+      tags:
+      - cards
+  /cards/by-id/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Helps to update an existing card
+      parameters:
+      - description: update card body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/data.UpdateCardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a card
       tags:
       - cards
   /healthcheck:
@@ -654,6 +720,10 @@ paths:
       produces:
       - application/json
       responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
         "400":
           description: Incorrect id path
           schema:

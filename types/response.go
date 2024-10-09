@@ -1,7 +1,7 @@
 package types
 
 type SuccessResponse struct {
-	Message string      `json:"message" example:"Success!"`
+	Message string      `json:"message" example:"success"`
 	Data    interface{} `json:"data"`
 }
 
