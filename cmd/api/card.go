@@ -43,6 +43,7 @@ func (app *application) createCardHandler(w http.ResponseWriter, r *http.Request
 		CharacterName: payload.CharacterName,
 		SerialNumber:  payload.SerialNumber,
 		ImageUrl:      payload.ImageUrl,
+		Exists:        payload.Exists,
 	}
 
 	if err := app.models.Cards.Create(&newCard, nil); err != nil {
@@ -58,6 +59,7 @@ func (app *application) createCardHandler(w http.ResponseWriter, r *http.Request
 		CharacterName: newCard.CharacterName,
 		SerialNumber:  newCard.SerialNumber,
 		ImageUrl:      newCard.ImageUrl,
+		Exists:        newCard.Exists,
 	}, nil)
 }
 
@@ -85,6 +87,7 @@ func (app *application) getAllCardsHandler(w http.ResponseWriter, _ *http.Reques
 			CharacterName: card.CharacterName,
 			SerialNumber:  card.SerialNumber,
 			ImageUrl:      card.ImageUrl,
+			Exists:        card.Exists,
 		})
 	}
 
@@ -104,6 +107,7 @@ func (app *application) getAllCardsHandler(w http.ResponseWriter, _ *http.Reques
 //	@Success		200		{object}	types.SuccessResponse
 //	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
 //	@Failure		403		{object}	types.ErrorResponse	"Action is forbidden for user of this role"
+//	@Failure		404		{object}	types.ErrorResponse	"Card not found"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Failure		500		{object}	types.ErrorResponse	"Unexpected database error"
 //	@Router			/cards/by-id/{id} [patch]
@@ -130,6 +134,7 @@ func (app *application) updateCardHandler(w http.ResponseWriter, r *http.Request
 		CharacterName: payload.CharacterName,
 		SerialNumber:  payload.SerialNumber,
 		ImageUrl:      payload.ImageUrl,
+		Exists:        payload.Exists,
 	}
 
 	if err := app.models.Cards.Update(&data.Card{ID: id}, &updateBody, nil); err != nil {
@@ -140,6 +145,19 @@ func (app *application) updateCardHandler(w http.ResponseWriter, r *http.Request
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
+// Get by id godoc
+//
+//	@Summary		Get by id
+//	@Description	Helps to retrieve an existing card by id
+//	@Tags			cards
+//	@Produce		json
+//	@Param			id	path		uuid	true	"card id"
+//	@Success		200	{object}	types.SuccessResponse{data=data.GetCardResponse}
+//	@Failure		400	{object}	types.ErrorResponse	"Incorrect id format"
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		404	{object}	types.ErrorResponse	"Card not found"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/cards/by-id/{id} [get]
 func (app *application) getCardByIdHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idFromParams)
@@ -169,9 +187,25 @@ func (app *application) getCardByIdHandler(w http.ResponseWriter, r *http.Reques
 		CharacterName: card.CharacterName,
 		SerialNumber:  card.SerialNumber,
 		ImageUrl:      card.ImageUrl,
+		Exists:        card.Exists,
 	}, nil)
 }
 
+// Delete by id godoc
+//
+//	@Summary		Delete by id
+//	@Description	Helps to delete an existing card by id
+//	@Tags			cards
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		uuid	true	"card id"
+//	@Success		200	{object}	types.SuccessResponse
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		403	{object}	types.ErrorResponse	"Action is forbidden for user of this role"
+//	@Failure		404	{object}	types.ErrorResponse	"Card not found"
+//	@Failure		422	{object}	types.ErrorResponse	"Validation error"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/cards/by-id/{id} [delete]
 func (app *application) deleteCardByIdHandler(w http.ResponseWriter, r *http.Request) {
 	idFromParams := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idFromParams)
@@ -190,6 +224,17 @@ func (app *application) deleteCardByIdHandler(w http.ResponseWriter, r *http.Req
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
 
+// Get collection info godoc
+//
+//	@Summary		Get collection info
+//	@Description	Helps to retrieve collection info
+//	@Tags			cards
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse{data=data.GetCollectionInfoResponse}
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/collection/info [get]
 func (app *application) getCollectionInfoHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
@@ -222,6 +267,19 @@ func (app *application) getCollectionInfoHandler(w http.ResponseWriter, r *http.
 	}, nil)
 }
 
+// Get all cards by rarity godoc
+//
+//	@Summary		Get all cards by rarity
+//	@Description	Helps to retrieve all cards by rarity
+//	@Tags			cards
+//	@Security		BearerAuth
+//	@Param			rarity	query	string	false	"rarity of the card"
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse{data=[]data.GetOwnedCardResponse}
+//	@Failure		400	{object}	types.ErrorResponse	"Rarity is required"
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/collection/get-by-rarity [get]
 func (app *application) getAllCardsByRarityHandler(w http.ResponseWriter, r *http.Request) {
 	rarity := r.URL.Query().Get("rarity")
 	user, err := data.GetUserFromRequestContext(r)
@@ -246,6 +304,20 @@ func (app *application) getAllCardsByRarityHandler(w http.ResponseWriter, r *htt
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, cards, nil)
 }
 
+// Update collection info godoc
+//
+//	@Summary		Update collection info
+//	@Description	Helps to update collection info (change collected status)
+//	@Tags			cards
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Accept			json
+//	@Param			body	body		data.UpdateCollectionRequest	true	"collection update body"
+//	@Success		200		{object}	types.SuccessResponse{data=data.UpdateCollectionResponse}
+//	@Failure		400		{object}	types.ErrorResponse	"Rarity is required"
+//	@Failure		401		{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		500		{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/collection/update [post]
 func (app *application) updateCollectionInfoHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := data.GetUserFromRequestContext(r)
 	if err != nil {
@@ -276,6 +348,19 @@ func (app *application) updateCollectionInfoHandler(w http.ResponseWriter, r *ht
 	}, nil)
 }
 
+// Search cards by term godoc
+//
+//	@Summary		Search cards by term
+//	@Description	Helps to search cards by term (by character name or serial number)
+//	@Tags			cards
+//	@Security		BearerAuth
+//	@Param			term	query	string	false	"search term"
+//	@Produce		json
+//	@Success		200	{object}	types.SuccessResponse{data=[]data.GetOwnedCardResponse}
+//	@Failure		400	{object}	types.ErrorResponse	"Term is required"
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/collection/search [get]
 func (app *application) searchCardsWithTermHandler(w http.ResponseWriter, r *http.Request) {
 	term := r.URL.Query().Get("term")
 	user, err := data.GetUserFromRequestContext(r)

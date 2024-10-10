@@ -12,9 +12,10 @@ import (
 type Card struct {
 	ID            uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
 	Rarity        *string   `gorm:"type:varchar(12);not null"`
-	CharacterName *string   `gorm:"type:varchar(64);default=''"`
+	CharacterName *string   `gorm:"type:varchar(64);default:''"`
 	SerialNumber  *string   `gorm:"type:varchar(64);not null"`
 	ImageUrl      *string   `gorm:"type:varchar(256);default:''"`
+	Exists        *bool     `gorm:"type:bool;default:true"`
 	CreatedAt     time.Time `gorm:"not null"`
 	UpdatedAt     time.Time `gorm:"not null"`
 }
@@ -58,7 +59,7 @@ func (m CardModel) FindOne(find *Card) (Card, error) {
 }
 
 func (m CardModel) GetAllRarities() ([]string, error) {
-	var dest []struct{ Rarity *string }
+	dest := make([]struct{ Rarity *string }, 0)
 	if err := m.DB.Model(&Card{}).Distinct("rarity").Find(&dest).Error; err != nil {
 		m.logger.Err(err).Msg("failed to get all rarities")
 		return nil, err
@@ -100,7 +101,7 @@ func (m CardModel) GetCollectedCount(userID string) (int64, error) {
 
 // Get all cards by rarity
 func (m CardModel) FindAllOwnedByRarity(userID string, rarity string) ([]GetOwnedCardResponse, error) {
-	var dest []GetOwnedCardResponse
+	dest := make([]GetOwnedCardResponse, 0)
 	if err := m.DB.Model(&Card{}).Select(
 		"cards.id as id, cards.rarity as rarity, cards.character_name as character_name, cards.serial_number as serial_number, cards.image_url as image_url, COALESCE(cci.status, ?) as status",
 		types.CardNotCollected,
@@ -119,7 +120,7 @@ func (m CardModel) FindAllOwnedByRarity(userID string, rarity string) ([]GetOwne
 }
 
 func (m CardModel) SearchCardsWithTerm(userID string, term string) ([]GetOwnedCardResponse, error) {
-	var dest []GetOwnedCardResponse
+	dest := make([]GetOwnedCardResponse, 0)
 	if err := m.DB.Model(&Card{}).Select(
 		"cards.id as id, cards.rarity as rarity, cards.character_name as character_name, "+
 			"cards.serial_number as serial_number, cards.image_url as image_url, COALESCE(cci.status, ?) as status, "+
@@ -143,7 +144,7 @@ func (m CardModel) SearchCardsWithTerm(userID string, term string) ([]GetOwnedCa
 }
 
 func (m CardModel) FindAll(find *Card) ([]Card, error) {
-	var dest []Card
+	dest := make([]Card, 0)
 	err := m.DB.Find(&dest, &find).Error
 
 	return dest, err
@@ -164,16 +165,18 @@ func (m CardModel) DeleteOneById(id interface{}, tx *gorm.DB) error {
 
 type CreateCardRequest struct {
 	Rarity        *string `json:"rarity" example:"SSR" validate:"required,max=12"`
-	CharacterName *string `json:"character_name" example:"Hatake Kakashi" validate:"omitempty,min=2,max=64"`
+	CharacterName *string `json:"character_name" example:"Hatake Kakashi" validate:"omitempty,len=0|min=2,max=64"`
 	SerialNumber  *string `json:"serial_number" example:"SE-014" validate:"len=0|min=1,max=64"`
-	ImageUrl      *string `json:"image_url" example:"https://example.com/image.jpg" validate:"len=0|url"`
+	ImageUrl      *string `json:"image_url" example:"https://example.com/image.jpg" validate:"omitempty,len=0|url"`
+	Exists        *bool   `json:"exists" example:"true" validate:"omitempty"`
 }
 
 type UpdateCardRequest struct {
 	Rarity        *string `json:"rarity" example:"SSR" validate:"omitempty,max=12"`
 	CharacterName *string `json:"character_name" example:"Hatake Kakashi" validate:"omitempty,min=2,max=64"`
-	SerialNumber  *string `json:"serial_number" example:"SE-014" validate:"omitempty|len=0|min=1,max=64"`
-	ImageUrl      *string `json:"image_url" example:"https://example.com/image.jpg" validate:"len=0|url"`
+	SerialNumber  *string `json:"serial_number" example:"SE-014" validate:"omitempty,len=0|min=1,max=64"`
+	ImageUrl      *string `json:"image_url" example:"https://example.com/image.jpg" validate:"omitempty,len=0|url"`
+	Exists        *bool   `json:"exists" example:"true" validate:"boolean"`
 }
 
 type GetCardResponse struct {
@@ -182,6 +185,7 @@ type GetCardResponse struct {
 	CharacterName *string   `json:"character_name" example:"Hatake Kakashi"`
 	SerialNumber  *string   `json:"serial_number" example:"SE-014"`
 	ImageUrl      *string   `json:"image_url" example:"https://example.com/image.jpg"`
+	Exists        *bool     `json:"exists" example:"true"`
 }
 
 type GetOwnedCardResponse struct {
@@ -191,6 +195,7 @@ type GetOwnedCardResponse struct {
 	SerialNumber  *string   `json:"serial_number" example:"SE-014"`
 	ImageUrl      *string   `json:"image_url" example:"https://example.com/image.jpg"`
 	Status        *string   `json:"status" example:"collected"`
+	Exists        *bool     `json:"exists" example:"true"`
 }
 
 type GetCollectionInfoResponse struct {

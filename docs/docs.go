@@ -389,6 +389,113 @@ const docTemplate = `{
             }
         },
         "/cards/by-id/{id}": {
+            "get": {
+                "description": "Helps to retrieve an existing card by id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Get by id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.GetCardResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Incorrect id format",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Card not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to delete an existing card by id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Delete by id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Card not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -436,8 +543,264 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "Card not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
                     "422": {
                         "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/collection/get-by-rarity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to retrieve all cards by rarity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Get all cards by rarity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "rarity of the card",
+                        "name": "rarity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/data.GetOwnedCardResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Rarity is required",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/collection/info": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to retrieve collection info",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Get collection info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.GetCollectionInfoResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/collection/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to search cards by term (by character name or serial number)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Search cards by term",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "search term",
+                        "name": "term",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/data.GetOwnedCardResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Term is required",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/collection/update": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to update collection info (change collected status)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Update collection info",
+                "parameters": [
+                    {
+                        "description": "collection update body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/data.UpdateCollectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.UpdateCollectionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Rarity is required",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -1183,8 +1546,11 @@ const docTemplate = `{
                 "character_name": {
                     "type": "string",
                     "maxLength": 64,
-                    "minLength": 2,
                     "example": "Hatake Kakashi"
+                },
+                "exists": {
+                    "type": "boolean",
+                    "example": true
                 },
                 "image_url": {
                     "type": "string",
@@ -1236,6 +1602,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Hatake Kakashi"
                 },
+                "exists": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
@@ -1251,6 +1621,30 @@ const docTemplate = `{
                 "serial_number": {
                     "type": "string",
                     "example": "SE-014"
+                }
+            }
+        },
+        "data.GetCollectionInfoResponse": {
+            "type": "object",
+            "properties": {
+                "cards_collected": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "cards_total": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "rarities": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"SSR\"",
+                        "\"SR\"",
+                        "\"R\"]"
+                    ]
                 }
             }
         },
@@ -1277,6 +1671,39 @@ const docTemplate = `{
                 "original_title": {
                     "type": "string",
                     "example": "Kayou"
+                }
+            }
+        },
+        "data.GetOwnedCardResponse": {
+            "type": "object",
+            "properties": {
+                "character_name": {
+                    "type": "string",
+                    "example": "Hatake Kakashi"
+                },
+                "exists": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "image_url": {
+                    "type": "string",
+                    "example": "https://example.com/image.jpg"
+                },
+                "rarity": {
+                    "type": "string",
+                    "example": "SSR"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "example": "SE-014"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "collected"
                 }
             }
         },
@@ -1412,6 +1839,10 @@ const docTemplate = `{
                     "minLength": 2,
                     "example": "Hatake Kakashi"
                 },
+                "exists": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "image_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
@@ -1425,6 +1856,36 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 64,
                     "example": "SE-014"
+                }
+            }
+        },
+        "data.UpdateCollectionChange": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/types.CollectionCardStatus"
+                }
+            }
+        },
+        "data.UpdateCollectionRequest": {
+            "type": "object",
+            "properties": {
+                "change": {
+                    "$ref": "#/definitions/data.UpdateCollectionChange"
+                },
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "data.UpdateCollectionResponse": {
+            "type": "object",
+            "properties": {
+                "cards_collected": {
+                    "type": "integer"
                 }
             }
         },
@@ -1465,6 +1926,17 @@ const docTemplate = `{
                     "example": "realhokage"
                 }
             }
+        },
+        "types.CollectionCardStatus": {
+            "type": "string",
+            "enum": [
+                "collected",
+                "not-collected"
+            ],
+            "x-enum-varnames": [
+                "CardCollected",
+                "CardNotCollected"
+            ]
         },
         "types.DetailedError": {
             "type": "object",
@@ -1513,7 +1985,7 @@ const docTemplate = `{
                 "data": {},
                 "message": {
                     "type": "string",
-                    "example": "Success!"
+                    "example": "success"
                 }
             }
         },

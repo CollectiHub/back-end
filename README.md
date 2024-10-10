@@ -3,11 +3,11 @@
 ## Running (testing)
 
 To run testing API you need to add appropriate `.env.docker` file (use `.env.sample` as example)
-and run `docker compose -f docker-compose.testing.yml up` command. It will start database and
+and run `docker compose --profile testing up -d` command. It will start database and
 API server (on port `4000`).
 
 You will be able to access API server on `http://localhost:4000/api/v1/` and swagger
-documentation on `http://localhost:4000/swagger/`.
+documentation on `http://localhost:4000/api/v1/swagger/`.
 
 ## Running (development)
 
@@ -20,9 +20,6 @@ build or install the application, you need to work with that file.
 
 It's also important to start your database and fill environment
 file using `.env.sample` as example.
-
-There is `docker-compose.dev.yml` file that you can use to run database
-with Docker.
 
 ## Structure
 

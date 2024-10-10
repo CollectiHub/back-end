@@ -1,4 +1,4 @@
-name: collectihub-testing
+name: collectihub
 
 services:
   postgres:
@@ -12,6 +12,9 @@ services:
       - "5432:5432"
     volumes:
       - dbdata:/var/lib/postgresql/data
+    profiles:
+      - testing
+      - development
 
   api:
     build:
@@ -22,6 +25,8 @@ services:
       - postgres
     ports:
       - "4000:4000"
+    profiles:
+      - testing
 
 volumes:
   dbdata:

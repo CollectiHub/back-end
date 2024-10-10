@@ -32,8 +32,10 @@ definitions:
       character_name:
         example: Hatake Kakashi
         maxLength: 64
-        minLength: 2
         type: string
+      exists:
+        example: true
+        type: boolean
       image_url:
         example: https://example.com/image.jpg
         type: string
@@ -73,6 +75,9 @@ definitions:
       character_name:
         example: Hatake Kakashi
         type: string
+      exists:
+        example: true
+        type: boolean
       id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
@@ -85,6 +90,23 @@ definitions:
       serial_number:
         example: SE-014
         type: string
+    type: object
+  data.GetCollectionInfoResponse:
+    properties:
+      cards_collected:
+        example: 100
+        type: integer
+      cards_total:
+        example: 100
+        type: integer
+      rarities:
+        example:
+        - '["SSR"'
+        - '"SR"'
+        - '"R"]'
+        items:
+          type: string
+        type: array
     type: object
   data.GetManufacturerResponse:
     properties:
@@ -103,6 +125,30 @@ definitions:
         type: string
       original_title:
         example: Kayou
+        type: string
+    type: object
+  data.GetOwnedCardResponse:
+    properties:
+      character_name:
+        example: Hatake Kakashi
+        type: string
+      exists:
+        example: true
+        type: boolean
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      image_url:
+        example: https://example.com/image.jpg
+        type: string
+      rarity:
+        example: SSR
+        type: string
+      serial_number:
+        example: SE-014
+        type: string
+      status:
+        example: collected
         type: string
     type: object
   data.GetUserResponse:
@@ -197,6 +243,9 @@ definitions:
         maxLength: 64
         minLength: 2
         type: string
+      exists:
+        example: true
+        type: boolean
       image_url:
         example: https://example.com/image.jpg
         type: string
@@ -208,6 +257,25 @@ definitions:
         example: SE-014
         maxLength: 64
         type: string
+    type: object
+  data.UpdateCollectionChange:
+    properties:
+      status:
+        $ref: '#/definitions/types.CollectionCardStatus'
+    type: object
+  data.UpdateCollectionRequest:
+    properties:
+      change:
+        $ref: '#/definitions/data.UpdateCollectionChange'
+      ids:
+        items:
+          type: string
+        type: array
+    type: object
+  data.UpdateCollectionResponse:
+    properties:
+      cards_collected:
+        type: integer
     type: object
   data.UpdateManufacturerRequest:
     properties:
@@ -237,6 +305,14 @@ definitions:
         minLength: 6
         type: string
     type: object
+  types.CollectionCardStatus:
+    enum:
+    - collected
+    - not-collected
+    type: string
+    x-enum-varnames:
+    - CardCollected
+    - CardNotCollected
   types.DetailedError:
     properties:
       detail:
@@ -271,7 +347,7 @@ definitions:
     properties:
       data: {}
       message:
-        example: Success!
+        example: success
         type: string
     type: object
   types.UserRole:
@@ -530,6 +606,73 @@ paths:
       tags:
       - cards
   /cards/by-id/{id}:
+    delete:
+      description: Helps to delete an existing card by id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.SuccessResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Card not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete by id
+      tags:
+      - cards
+    get:
+      description: Helps to retrieve an existing card by id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.GetCardResponse'
+              type: object
+        "400":
+          description: Incorrect id format
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Card not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get by id
+      tags:
+      - cards
     patch:
       consumes:
       - application/json
@@ -556,6 +699,10 @@ paths:
           description: Action is forbidden for user of this role
           schema:
             $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Card not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
         "422":
           description: Validation error
           schema:
@@ -567,6 +714,153 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a card
+      tags:
+      - cards
+  /collection/get-by-rarity:
+    get:
+      description: Helps to retrieve all cards by rarity
+      parameters:
+      - description: rarity of the card
+        in: query
+        name: rarity
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/data.GetOwnedCardResponse'
+                  type: array
+              type: object
+        "400":
+          description: Rarity is required
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all cards by rarity
+      tags:
+      - cards
+  /collection/info:
+    get:
+      description: Helps to retrieve collection info
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.GetCollectionInfoResponse'
+              type: object
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get collection info
+      tags:
+      - cards
+  /collection/search:
+    get:
+      description: Helps to search cards by term (by character name or serial number)
+      parameters:
+      - description: search term
+        in: query
+        name: term
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/data.GetOwnedCardResponse'
+                  type: array
+              type: object
+        "400":
+          description: Term is required
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Search cards by term
+      tags:
+      - cards
+  /collection/update:
+    post:
+      consumes:
+      - application/json
+      description: Helps to update collection info (change collected status)
+      parameters:
+      - description: collection update body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/data.UpdateCollectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.UpdateCollectionResponse'
+              type: object
+        "400":
+          description: Rarity is required
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update collection info
       tags:
       - cards
   /healthcheck:
