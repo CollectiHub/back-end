@@ -8,7 +8,7 @@ definitions:
   data.AccountVerificationRequest:
     properties:
       code:
-        example: "12345"
+        example: f47ac10b58cc4372a5670e02b2c3d479
         type: string
     required:
     - code
@@ -184,7 +184,7 @@ definitions:
   data.PasswordResetRequest:
     properties:
       code:
-        example: "123456"
+        example: f47ac10b58cc4372a5670e02b2c3d479
         type: string
       email:
         example: re4lhok4ge@gmail.com
@@ -520,7 +520,7 @@ paths:
             - $ref: '#/definitions/types.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/data.GetUserResponse'
+                  $ref: '#/definitions/data.AccessTokenResponse'
               type: object
         "400":
           description: Password hashing error; Unexpected database error;

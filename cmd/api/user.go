@@ -25,7 +25,7 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		data.SignUpRequest	true	"sign up body"
-//	@Success		201		{object}	types.SuccessResponse{data=data.GetUserResponse}
+//	@Success		201		{object}	types.SuccessResponse{data=data.AccessTokenResponse}
 //	@Failure		400		{object}	types.ErrorResponse	"Password hashing error; Unexpected database error;"
 //	@Failure		422		{object}	types.ErrorResponse	"Validation error"
 //	@Failure		409		{object}	types.ErrorResponse	"Username of email in from request is already taken"
@@ -82,13 +82,8 @@ func (app *application) signUpHandler(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	app.logger.Info().Msgf("New user (%s) was successfully created", *newUser.Username)
-	json.WriteJSON(w, http.StatusCreated, constants.SuccessMessage, &data.GetUserResponse{
-		ID:       newUser.ID,
-		Username: newUser.Username,
-		Email:    newUser.Email,
-		Role:     newUser.Role,
-		Verified: newUser.Verified,
-	}, nil)
+
+	app.generateUserTokenPair(w, newUser, true, true)
 }
 
 // GoogleLogin godoc

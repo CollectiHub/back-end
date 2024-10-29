@@ -246,7 +246,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/data.GetUserResponse"
+                                            "$ref": "#/definitions/data.AccessTokenResponse"
                                         }
                                     }
                                 }
@@ -1514,7 +1514,7 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "string",
-                    "example": "12345"
+                    "example": "f47ac10b58cc4372a5670e02b2c3d479"
                 }
             }
         },
@@ -1764,7 +1764,7 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "string",
-                    "example": "123456"
+                    "example": "f47ac10b58cc4372a5670e02b2c3d479"
                 },
                 "email": {
                     "type": "string",
