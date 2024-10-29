@@ -106,7 +106,7 @@ type ChangePasswordRequest struct {
 }
 
 type AccountVerificationRequest struct {
-	Code *string `json:"code" example:"12345" validate:"required,len=5"`
+	Code *string `json:"code" example:"f47ac10b58cc4372a5670e02b2c3d479" validate:"required"`
 }
 
 type SendPasswordResetEmailRequest struct {
@@ -115,7 +115,7 @@ type SendPasswordResetEmailRequest struct {
 
 type PasswordResetRequest struct {
 	Email       *string `json:"email" example:"re4lhok4ge@gmail.com" validate:"required,email"`
-	Code        *string `json:"code" example:"123456" validate:"required,len=6"`
+	Code        *string `json:"code" example:"f47ac10b58cc4372a5670e02b2c3d479" validate:"required"`
 	NewPassword *string `json:"new_password" example:"strongpass" validate:"required,min=8"`
 }
 

@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	Port       int    `mapstructure:"PORT"`
-	Env        string `mapstructure:"ENV"`
-	HostDomain string `mapstructure:"HOST_DOMAIN"`
-	BaseUrl    string `mapstructure:"BASE_URL"`
+	Port        int    `mapstructure:"PORT"`
+	Env         string `mapstructure:"ENV"`
+	HostDomain  string `mapstructure:"HOST_DOMAIN"`
+	BaseUrl     string `mapstructure:"BASE_URL"`
+	DeepLinkUrl string `mapstructure:"DEEP_LINK_URL"`
 
 	DB_DSN string `mapstructure:"PG_CONNECTION_STRING"`
 

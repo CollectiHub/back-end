@@ -63,7 +63,7 @@ func (app *application) signUpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Sending verification email
 	expiration := time.Now().Add(time.Minute * 5)
-	code := util.GenerateRandomNumberString(constants.EmailVerificationCodeLength)
+	code := util.GenerateCleanUUID()
 	emailVerification := &data.VerificationCode{
 		UserID:  newUser.ID,
 		Expires: expiration,
@@ -76,7 +76,7 @@ func (app *application) signUpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go app.mailer.SendAccountVerificationEmail(*newUser.Email, *emailVerification.Code)
+	go app.mailer.SendAccountVerificationEmail(*newUser.Email, *emailVerification.Code, *newUser.Username)
 
 	// Commit transaction
 	tx.Commit()
@@ -306,7 +306,7 @@ func (app *application) resendEmailVerificationHandler(w http.ResponseWriter, r 
 	}
 
 	expiration := time.Now().Add(time.Minute * 5)
-	code := util.GenerateRandomNumberString(constants.EmailVerificationCodeLength)
+	code := util.GenerateCleanUUID()
 	emailVerification := &data.VerificationCode{
 		UserID:  user.ID,
 		Expires: expiration,
@@ -319,7 +319,7 @@ func (app *application) resendEmailVerificationHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	go app.mailer.SendAccountVerificationEmail(*user.Email, *emailVerification.Code)
+	go app.mailer.SendAccountVerificationEmail(*user.Email, *emailVerification.Code, *user.Username)
 
 	json.WriteJSON(w, http.StatusOK, "New messages was successfully sent", nil, nil)
 }
@@ -359,7 +359,7 @@ func (app *application) sendPasswordResetEmailHandler(w http.ResponseWriter, r *
 	}
 
 	expiration := time.Now().Add(time.Minute * 5)
-	code := util.GenerateRandomNumberString(constants.PasswordresetVerificationCodeLength)
+	code := util.GenerateCleanUUID()
 	passwordReset := &data.VerificationCode{
 		UserID:  user.ID,
 		Expires: expiration,
@@ -372,7 +372,7 @@ func (app *application) sendPasswordResetEmailHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	go app.mailer.SendPasswordResetVerificationEmail(*user.Email, *passwordReset.Code)
+	go app.mailer.SendPasswordResetVerificationEmail(*user.Email, *passwordReset.Code, *user.Username)
 
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }

@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func Decapitalize(s string) string {
@@ -45,6 +47,11 @@ func GenerateRandomString(length int) string {
 
 func GenerateRandomNumberString(length int) string {
 	return generateRandomStringWithCharset(length, "1234567890")
+}
+
+func GenerateCleanUUID() string {
+	id := uuid.New()
+	return strings.ReplaceAll(id.String(), "-", "")
 }
 
 func generateRandomStringWithCharset(length int, charset string) string {

@@ -3,7 +3,6 @@ name: collectihub
 services:
   postgres:
     image: postgres:latest
-    restart: always
     environment:
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
@@ -20,7 +19,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: on-failure
     depends_on:
       - postgres
     ports:
