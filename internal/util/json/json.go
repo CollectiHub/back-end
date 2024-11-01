@@ -1,9 +1,9 @@
 package json
 
 import (
-	"collectihub/internal/validation"
-	"collectihub/types"
 	"encoding/json"
+	"kadocore/internal/validation"
+	"kadocore/types"
 	"net/http"
 )
 

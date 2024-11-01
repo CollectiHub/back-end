@@ -1,12 +1,12 @@
 package main
 
 import (
-	"collectihub/internal/common"
-	"collectihub/internal/constants"
-	"collectihub/internal/data"
-	"collectihub/internal/util/json"
-	"collectihub/types"
 	"errors"
+	"kadocore/internal/common"
+	"kadocore/internal/constants"
+	"kadocore/internal/data"
+	"kadocore/internal/util/json"
+	"kadocore/types"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"

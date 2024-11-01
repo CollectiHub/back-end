@@ -1,6 +1,6 @@
 package data
 
-import "collectihub/types"
+import "kadocore/types"
 
 type HealthCheckResponse struct {
 	Version string                  `json:"version" example:"1.0.0"`

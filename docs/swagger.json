@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This API documentation describes endpoints and models you will face with during interaction with CollectiHub APIs",
-        "title": "CollectiHub API",
+        "description": "This API documentation describes endpoints and models you will face with during interaction with KadoCore APIs",
+        "title": "KadoCore API",
         "contact": {
             "name": "Back-end engineer",
             "email": "ka1tzyu@gmail.com"

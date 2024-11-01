@@ -1,9 +1,9 @@
 package validation
 
 import (
-	"collectihub/internal/constants"
-	"collectihub/types"
 	"database/sql/driver"
+	"kadocore/internal/constants"
+	"kadocore/types"
 	"reflect"
 
 	"github.com/dlclark/regexp2"

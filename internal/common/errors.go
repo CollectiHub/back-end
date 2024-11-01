@@ -1,11 +1,11 @@
 package common
 
 import (
-	"collectihub/internal/constants"
-	"collectihub/internal/util"
-	"collectihub/types"
 	"errors"
 	"fmt"
+	"kadocore/internal/constants"
+	"kadocore/internal/util"
+	"kadocore/types"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"

@@ -1,9 +1,9 @@
 package util
 
 import (
-	"collectihub/internal/data"
 	"encoding/base64"
 	"fmt"
+	"kadocore/internal/data"
 	"time"
 
 	"github.com/golang-jwt/jwt"

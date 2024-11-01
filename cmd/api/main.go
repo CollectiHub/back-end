@@ -1,12 +1,12 @@
 package main
 
 import (
-	"collectihub/internal/auth"
-	"collectihub/internal/config"
-	"collectihub/internal/data"
-	"collectihub/internal/database"
-	"collectihub/internal/mailer"
-	"collectihub/internal/util/logger"
+	"kadocore/internal/auth"
+	"kadocore/internal/config"
+	"kadocore/internal/data"
+	"kadocore/internal/database"
+	"kadocore/internal/mailer"
+	"kadocore/internal/util/logger"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -23,9 +23,9 @@ type application struct {
 	wg     sync.WaitGroup
 }
 
-//	@title			CollectiHub API
+//	@title			KadoCore API
 //	@version		1.0
-//	@description	This API documentation describes endpoints and models you will face with during interaction with CollectiHub APIs
+//	@description	This API documentation describes endpoints and models you will face with during interaction with KadoCore APIs
 
 //	@contact.name	Back-end engineer
 //	@contact.email	ka1tzyu@gmail.com

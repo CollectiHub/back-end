@@ -1,9 +1,9 @@
 package database
 
 import (
-	"collectihub/internal/config"
-	"collectihub/internal/data"
 	"context"
+	"kadocore/internal/config"
+	"kadocore/internal/data"
 	"log"
 	"time"
 

@@ -1,16 +1,16 @@
 package main
 
 import (
-	"collectihub/internal/common"
-	"collectihub/internal/constants"
-	"collectihub/internal/data"
-	"collectihub/internal/util"
-	"collectihub/internal/util/json"
-	"collectihub/types"
 	"context"
 	jsonLib "encoding/json"
 	"errors"
 	"io"
+	"kadocore/internal/common"
+	"kadocore/internal/constants"
+	"kadocore/internal/data"
+	"kadocore/internal/util"
+	"kadocore/internal/util/json"
+	"kadocore/types"
 	"net/http"
 	"time"
 

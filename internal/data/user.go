@@ -1,9 +1,9 @@
 package data
 
 import (
-	"collectihub/internal/constants"
-	"collectihub/types"
 	"errors"
+	"kadocore/internal/constants"
+	"kadocore/types"
 	"log"
 	"net/http"
 	"time"

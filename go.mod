@@ -1,4 +1,4 @@
-module collectihub
+module kadocore
 
 go 1.23.1
 

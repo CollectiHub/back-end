@@ -2,11 +2,11 @@ package mailer
 
 import (
 	"bytes"
-	"collectihub/internal/config"
-	"collectihub/internal/constants"
 	"errors"
 	"fmt"
 	"html/template"
+	"kadocore/internal/config"
+	"kadocore/internal/constants"
 	"os"
 
 	"github.com/wneessen/go-mail"
@@ -92,7 +92,7 @@ func (ml *Mailer) SendAccountVerificationEmail(to string, key string, name strin
 	if err = ml.sendMail(Mail{
 		Sender:   ml.username,
 		To:       []string{to},
-		Subject:  "CollectiHub - Account verification",
+		Subject:  "KadoCore - Account verification",
 		BodyType: mail.TypeTextHTML,
 		Body:     html,
 	}); err != nil {
@@ -126,7 +126,7 @@ func (ml *Mailer) SendPasswordResetVerificationEmail(to string, key string, name
 	if err = ml.sendMail(Mail{
 		Sender:   ml.username,
 		To:       []string{to},
-		Subject:  "CollectiHub - Password reset",
+		Subject:  "KadoCore - Password reset",
 		BodyType: mail.TypeTextHTML,
 		Body:     html,
 	}); err != nil {

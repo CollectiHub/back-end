@@ -364,8 +364,8 @@ info:
     email: ka1tzyu@gmail.com
     name: Back-end engineer
   description: This API documentation describes endpoints and models you will face
-    with during interaction with CollectiHub APIs
-  title: CollectiHub API
+    with during interaction with KadoCore APIs
+  title: KadoCore API
   version: "1.0"
 paths:
   /auth/google/callback:

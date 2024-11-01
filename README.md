@@ -1,4 +1,4 @@
-# back-end
+# KadocoreAPI
 
 ## Running (testing)
 

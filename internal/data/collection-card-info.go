@@ -1,7 +1,7 @@
 package data
 
 import (
-	"collectihub/types"
+	"kadocore/types"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -12,6 +12,8 @@ import (
 type CollectionCardInfo struct {
 	CardID uuid.UUID                  `gorm:"type:uuid;primaryKey"`
 	UserID uuid.UUID                  `gorm:"type:uuid;primaryKey"`
+	User   User                       `gorm:"constraint:OnDelete:CASCADE"`
+	Card   Card                       `gorm:"constraint:OnDelete:CASCADE"`
 	Status types.CollectionCardStatus `gorm:"type:collection_card_status;not null"`
 }
 

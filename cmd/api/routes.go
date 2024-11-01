@@ -1,12 +1,12 @@
 package main
 
 import (
-	"collectihub/internal/constants"
-	"collectihub/types"
 	"fmt"
+	"kadocore/internal/constants"
+	"kadocore/types"
 	"net/http"
 
-	_ "collectihub/docs"
+	_ "kadocore/docs"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"

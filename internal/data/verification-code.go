@@ -1,7 +1,7 @@
 package data
 
 import (
-	"collectihub/types"
+	"kadocore/types"
 	"time"
 
 	"github.com/google/uuid"

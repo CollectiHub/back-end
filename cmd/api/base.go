@@ -1,10 +1,10 @@
 package main
 
 import (
-	"collectihub/internal/constants"
-	"collectihub/internal/data"
-	"collectihub/internal/util/json"
-	"collectihub/types"
+	"kadocore/internal/constants"
+	"kadocore/internal/data"
+	"kadocore/internal/util/json"
+	"kadocore/types"
 	"net/http"
 )
 

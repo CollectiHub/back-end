@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"collectihub/internal/config"
 	"fmt"
+	"kadocore/internal/config"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"

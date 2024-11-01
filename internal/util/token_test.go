@@ -1,12 +1,12 @@
 package util
 
 import (
-	"collectihub/internal/data"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"kadocore/internal/data"
 	"testing"
 	"time"
 )
