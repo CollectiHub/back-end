@@ -58,6 +58,7 @@ func New(cfg config.Config) *gorm.DB {
 			&data.Manufacturer{},
 			&data.Card{},
 			&data.CollectionCardInfo{},
+			&data.NonExistentCard{},
 		}
 
 		for i := 0; i < len(migration_models); i++ {

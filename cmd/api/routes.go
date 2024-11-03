@@ -50,6 +50,11 @@ func (app *application) routes() http.Handler {
 	r.Patch("/manufacturers/{id}", app.requireRole(app.updateManufacturerHandler, types.ADMIN))
 	r.Delete("/manufacturers/{id}", app.requireRole(app.deleteManufacturerHandler, types.ADMIN))
 
+	// Non-existent cards handlers
+	r.Post("/manufacturers/{id}/add-non-existent-card", app.requireRole(app.addNonExistentCardHandler, types.ADMIN))
+	r.Get("/manufacturers/{id}/non-existent-card", app.authenticate(app.getNonExistentCardsHandler))
+	r.Delete("/manufacturers/non-existent-card/{id}", app.requireRole(app.deleteNonExistentCardHandler, types.ADMIN))
+
 	// Cards
 	r.Post("/cards", app.requireRole(app.createCardHandler, types.ADMIN))
 	r.Get("/cards", app.getAllCardsHandler)

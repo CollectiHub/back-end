@@ -199,7 +199,8 @@ type GetOwnedCardResponse struct {
 }
 
 type GetCollectionInfoResponse struct {
-	Rarities       []string `json:"rarities" example:"[\"SSR\",\"SR\",\"R\"]"`
-	CardsTotal     int64    `json:"cards_total" example:"100"`
-	CardsCollected int64    `json:"cards_collected" example:"100"`
+	Rarities         []string                     `json:"rarities" example:"[\"SSR\",\"SR\",\"R\"]"`
+	CardsTotal       int64                        `json:"cards_total" example:"100"`
+	CardsCollected   int64                        `json:"cards_collected" example:"100"`
+	NonExistentCards []GetNonExistentCardResponse `json:"non_existent_cards"`
 }

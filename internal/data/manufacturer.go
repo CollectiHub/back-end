@@ -10,11 +10,14 @@ import (
 type Manufacturer struct {
 	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
 	OriginalTitle  *string   `gorm:"type:varchar(64);not null"`
-	DescriptionEng *string   `gorm:"type:text"`
-	DescriptionUkr *string   `gorm:"type:text"`
-	Image          *string   `gorm:"type:varchar(256)"`
-	CreatedAt      time.Time `gorm:"not null"`
-	UpdatedAt      time.Time `gorm:"not null"`
+	DescriptionEng *string   `gorm:"type:text;default:''"`
+	DescriptionUkr *string   `gorm:"type:text;default:''"`
+	Image          *string   `gorm:"type:varchar(256);default:''"`
+
+	NonExistentCards []NonExistentCard `gorm:"constraint:OnDelete:CASCADE"`
+
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
 }
 
 type ManufacturerModel struct {

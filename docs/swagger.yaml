@@ -70,6 +70,17 @@ definitions:
     required:
     - original_title
     type: object
+  data.CreateNonExistentCardRequest:
+    properties:
+      rarity:
+        example: SSR
+        maxLength: 12
+        type: string
+      serial_number:
+        example: SE-014
+        maxLength: 64
+        type: string
+    type: object
   data.GetCardResponse:
     properties:
       character_name:
@@ -99,6 +110,10 @@ definitions:
       cards_total:
         example: 100
         type: integer
+      non_existent_cards:
+        items:
+          $ref: '#/definitions/data.GetNonExistentCardResponse'
+        type: array
       rarities:
         example:
         - '["SSR"'
@@ -125,6 +140,18 @@ definitions:
         type: string
       original_title:
         example: Kayou
+        type: string
+    type: object
+  data.GetNonExistentCardResponse:
+    properties:
+      id:
+        example: 00000000-0000-0000-0000-000000000000
+        type: string
+      rarity:
+        example: SSR
+        type: string
+      serial_number:
+        example: SE-014
         type: string
     type: object
   data.GetOwnedCardResponse:
@@ -1041,6 +1068,86 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a manufacturer
+      tags:
+      - manufacturers
+  /manufacturers/{id}/add-non-existent-card:
+    post:
+      description: Helps to add non-existent cards to manufacturer
+      parameters:
+      - description: add non-existent card body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/data.CreateNonExistentCardRequest'
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Incorrect id path
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add non-existent cards
+      tags:
+      - manufacturers
+  /manufacturers/{id}/non-existent-cards:
+    get:
+      description: Helps to get non-existent cards of manufacturer
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Incorrect id path
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get non-existent cards
+      tags:
+      - manufacturers
+  /manufacturers/non-existent-card/{id}:
+    delete:
+      description: Helps to delete the existing non-exitent card
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Incorrect id path
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: User is not logged in
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Action is forbidden for user of this role
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete non-existent card
       tags:
       - manufacturers
   /users:

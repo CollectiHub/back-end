@@ -214,3 +214,120 @@ func (app *application) deleteManufacturerHandler(w http.ResponseWriter, r *http
 
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
 }
+
+// Add non-existent cards godoc
+//
+//	@Summary		Add non-existent cards
+//	@Description	Helps to add non-existent cards to manufacturer
+//	@Tags			manufacturers
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id		path		uuid								true	"manufacturer id"
+//	@Param			body	body		data.CreateNonExistentCardRequest	true	"add non-existent card body"
+//	@Failure		400		{object}	types.ErrorResponse					"Incorrect id path"
+//	@Failure		401		{object}	types.ErrorResponse					"User is not logged in"
+//	@Failure		403		{object}	types.ErrorResponse					"Action is forbidden for user of this role"
+//	@Failure		500		{object}	types.ErrorResponse					"Unexpected database error"
+//	@Router			/manufacturers/{id}/add-non-existent-card [post]
+func (app *application) addNonExistentCardHandler(w http.ResponseWriter, r *http.Request) {
+	idFromParams := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idFromParams)
+	if err != nil {
+		json.ErrorJSON(w, constants.IncorrectIdErrorMessage, types.HttpError{
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	payload := &data.CreateNonExistentCardRequest{}
+	json.DecodeJSON(*r, payload)
+	if err := json.ValidateStruct(w, payload); err != nil {
+		json.ErrorJSON(w, constants.JsonValidationErrorMessage, common.NewValidationError(err, payload))
+		return
+	}
+
+	newNonExistentCard := data.NonExistentCard{
+		ManufacturerID: id,
+		Rarity:         payload.Rarity,
+		SerialNumber:   payload.SerialNumber,
+	}
+
+	if err := app.models.NonExistentCards.Create(&newNonExistentCard, nil); err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
+}
+
+// Get all non-existent cards godoc
+//
+//	@Summary		Get non-existent cards
+//	@Description	Helps to get non-existent cards of manufacturer
+//	@Tags			manufacturers
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		uuid				true	"manufacturer id"
+//	@Failure		400	{object}	types.ErrorResponse	"Incorrect id path"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/manufacturers/{id}/non-existent-cards [get]
+func (app *application) getNonExistentCardsHandler(w http.ResponseWriter, r *http.Request) {
+	idFromParams := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idFromParams)
+	if err != nil {
+		json.ErrorJSON(w, constants.IncorrectIdErrorMessage, types.HttpError{
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	nonExistentCards, err := app.models.NonExistentCards.FindAll(&data.NonExistentCard{
+		ManufacturerID: id,
+	})
+	if err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	response := make([]data.GetNonExistentCardResponse, len(nonExistentCards))
+	for i, v := range nonExistentCards {
+		response[i] = data.GetNonExistentCardResponse{
+			ID:           v.ID,
+			Rarity:       v.Rarity,
+			SerialNumber: v.SerialNumber,
+		}
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, response, nil)
+}
+
+// Delete non-existent card godoc
+//
+//	@Summary		Delete non-existent card
+//	@Description	Helps to delete the existing non-exitent card
+//	@Tags			manufacturers
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		uuid				true	"non-exitent card id"
+//	@Failure		400	{object}	types.ErrorResponse	"Incorrect id path"
+//	@Failure		401	{object}	types.ErrorResponse	"User is not logged in"
+//	@Failure		403	{object}	types.ErrorResponse	"Action is forbidden for user of this role"
+//	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
+//	@Router			/manufacturers/non-existent-card/{id} [delete]
+func (app *application) deleteNonExistentCardHandler(w http.ResponseWriter, r *http.Request) {
+	idFromParams := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idFromParams)
+	if err != nil {
+		json.ErrorJSON(w, constants.IncorrectIdErrorMessage, types.HttpError{
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if err := app.models.NonExistentCards.DeleteOneById(id, nil); err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, nil, nil)
+}

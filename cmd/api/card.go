@@ -260,10 +260,26 @@ func (app *application) getCollectionInfoHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
+	nonExistentCardsRows, err := app.models.NonExistentCards.FindAll(&data.NonExistentCard{})
+	if err != nil {
+		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
+		return
+	}
+
+	var nonExistentCards []data.GetNonExistentCardResponse
+	for _, row := range nonExistentCardsRows {
+		nonExistentCards = append(nonExistentCards, data.GetNonExistentCardResponse{
+			ID:           row.ID,
+			Rarity:       row.Rarity,
+			SerialNumber: row.SerialNumber,
+		})
+	}
+
 	json.WriteJSON(w, http.StatusOK, constants.SuccessMessage, data.GetCollectionInfoResponse{
-		Rarities:       rarities,
-		CardsTotal:     totalCount,
-		CardsCollected: ownedCount,
+		Rarities:         rarities,
+		CardsTotal:       totalCount,
+		CardsCollected:   ownedCount,
+		NonExistentCards: nonExistentCards,
 	}, nil)
 }
 

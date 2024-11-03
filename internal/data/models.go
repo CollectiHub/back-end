@@ -12,6 +12,7 @@ type Models struct {
 	Manufacturers       ManufacturerModel
 	Cards               CardModel
 	CollectionCardInfos CollectionCardInfoModel
+	NonExistentCards    NonExistentCardsModel
 }
 
 func NewModels(db *gorm.DB, logger *zerolog.Logger) Models {
@@ -35,6 +36,9 @@ func NewModels(db *gorm.DB, logger *zerolog.Logger) Models {
 		CollectionCardInfos: CollectionCardInfoModel{
 			DB:     db,
 			logger: logger,
+		},
+		NonExistentCards: NonExistentCardsModel{
+			DB: db,
 		},
 	}
 }

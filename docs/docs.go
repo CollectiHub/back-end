@@ -948,6 +948,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/manufacturers/non-existent-card/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to delete the existing non-exitent card",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Delete non-existent card",
+                "responses": {
+                    "400": {
+                        "description": "Incorrect id path",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/manufacturers/{id}": {
             "get": {
                 "description": "Helps to get the manufacturer with the specified id",
@@ -1093,6 +1136,91 @@ const docTemplate = `{
                     },
                     "422": {
                         "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manufacturers/{id}/add-non-existent-card": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to add non-existent cards to manufacturer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Add non-existent cards",
+                "parameters": [
+                    {
+                        "description": "add non-existent card body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/data.CreateNonExistentCardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "400": {
+                        "description": "Incorrect id path",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "User is not logged in",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Action is forbidden for user of this role",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manufacturers/{id}/non-existent-cards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Helps to get non-existent cards of manufacturer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manufacturers"
+                ],
+                "summary": "Get non-existent cards",
+                "responses": {
+                    "400": {
+                        "description": "Incorrect id path",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -1595,6 +1723,21 @@ const docTemplate = `{
                 }
             }
         },
+        "data.CreateNonExistentCardRequest": {
+            "type": "object",
+            "properties": {
+                "rarity": {
+                    "type": "string",
+                    "maxLength": 12,
+                    "example": "SSR"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "SE-014"
+                }
+            }
+        },
         "data.GetCardResponse": {
             "type": "object",
             "properties": {
@@ -1635,6 +1778,12 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 100
                 },
+                "non_existent_cards": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/data.GetNonExistentCardResponse"
+                    }
+                },
                 "rarities": {
                     "type": "array",
                     "items": {
@@ -1671,6 +1820,23 @@ const docTemplate = `{
                 "original_title": {
                     "type": "string",
                     "example": "Kayou"
+                }
+            }
+        },
+        "data.GetNonExistentCardResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "00000000-0000-0000-0000-000000000000"
+                },
+                "rarity": {
+                    "type": "string",
+                    "example": "SSR"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "example": "SE-014"
                 }
             }
         },
