@@ -33,11 +33,11 @@ definitions:
         example: Hatake Kakashi
         maxLength: 64
         type: string
-      exists:
-        example: true
-        type: boolean
       image_url:
         example: https://example.com/image.jpg
+        type: string
+      manufacturer_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       rarity:
         example: SSR
@@ -48,6 +48,7 @@ definitions:
         maxLength: 64
         type: string
     required:
+    - manufacturer_id
     - rarity
     type: object
   data.CreateManufacturerRequest:
@@ -86,9 +87,6 @@ definitions:
       character_name:
         example: Hatake Kakashi
         type: string
-      exists:
-        example: true
-        type: boolean
       id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
@@ -159,9 +157,6 @@ definitions:
       character_name:
         example: Hatake Kakashi
         type: string
-      exists:
-        example: true
-        type: boolean
       id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
@@ -270,9 +265,6 @@ definitions:
         maxLength: 64
         minLength: 2
         type: string
-      exists:
-        example: true
-        type: boolean
       image_url:
         example: https://example.com/image.jpg
         type: string
@@ -565,29 +557,6 @@ paths:
       tags:
       - auth
   /cards:
-    get:
-      description: Helps to retrieve a list of all cards
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/types.SuccessResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/data.GetCardResponse'
-                  type: array
-              type: object
-        "500":
-          description: Unexpected database error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      summary: Get all cards
-      tags:
-      - cards
     post:
       consumes:
       - application/json
@@ -741,6 +710,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a card
+      tags:
+      - cards
+  /cards/by-manufacturer/{id}:
+    get:
+      description: Helps to retrieve a list of all cards
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/data.GetCardResponse'
+                  type: array
+              type: object
+        "500":
+          description: Unexpected database error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get all cards
       tags:
       - cards
   /collection/get-by-rarity:

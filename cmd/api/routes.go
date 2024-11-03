@@ -57,7 +57,7 @@ func (app *application) routes() http.Handler {
 
 	// Cards
 	r.Post("/cards", app.requireRole(app.createCardHandler, types.ADMIN))
-	r.Get("/cards", app.getAllCardsHandler)
+	r.Get("/cards/by-manufacturer/{id}", app.getAllCardsHandler)
 	r.Get("/cards/by-id/{id}", app.getCardByIdHandler)
 	r.Patch("/cards/by-id/{id}", app.requireRole(app.updateCardHandler, types.ADMIN))
 	r.Delete("/cards/by-id/{id}", app.requireRole(app.deleteCardByIdHandler, types.ADMIN))

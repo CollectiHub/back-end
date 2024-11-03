@@ -15,6 +15,7 @@ type Manufacturer struct {
 	Image          *string   `gorm:"type:varchar(256);default:''"`
 
 	NonExistentCards []NonExistentCard `gorm:"constraint:OnDelete:CASCADE"`
+	Cards            []Card            `gorm:"constraint:OnDelete:CASCADE"`
 
 	CreatedAt time.Time `gorm:"not null"`
 	UpdatedAt time.Time `gorm:"not null"`

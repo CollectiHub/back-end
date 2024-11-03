@@ -8,6 +8,7 @@ import (
 
 	"github.com/dlclark/regexp2"
 	validator_pkg "github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 func New() *validator_pkg.Validate {
@@ -21,6 +22,7 @@ func New() *validator_pkg.Validate {
 	})
 
 	v.RegisterCustomTypeFunc(ValidateValuer, types.NullableString{})
+	v.RegisterCustomTypeFunc(ValidateUUID, uuid.UUID{})
 
 	return v
 }
@@ -34,5 +36,13 @@ func ValidateValuer(field reflect.Value) interface{} {
 		// handle the error how you want
 	}
 
+	return nil
+}
+
+// ValidateUUID implements validator.CustomTypeFunc
+func ValidateUUID(field reflect.Value) interface{} {
+	if valuer, ok := field.Interface().(uuid.UUID); ok {
+		return valuer.String()
+	}
 	return nil
 }

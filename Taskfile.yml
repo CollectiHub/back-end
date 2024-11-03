@@ -8,6 +8,10 @@ tasks:
       - swag fmt
       - swag init -g cmd/api/main.go
     silent: false
+  run:
+    cmds:
+      - go run ./cmd/api/
+    silent: false
   test:
     cmds:
       - go test -v ./... -cover

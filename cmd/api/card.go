@@ -39,11 +39,11 @@ func (app *application) createCardHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	newCard := data.Card{
-		Rarity:        payload.Rarity,
-		CharacterName: payload.CharacterName,
-		SerialNumber:  payload.SerialNumber,
-		ImageUrl:      payload.ImageUrl,
-		Exists:        payload.Exists,
+		ManufacturerID: payload.ManufacturerID,
+		Rarity:         payload.Rarity,
+		CharacterName:  payload.CharacterName,
+		SerialNumber:   payload.SerialNumber,
+		ImageUrl:       payload.ImageUrl,
 	}
 
 	if err := app.models.Cards.Create(&newCard, nil); err != nil {
@@ -59,7 +59,6 @@ func (app *application) createCardHandler(w http.ResponseWriter, r *http.Request
 		CharacterName: newCard.CharacterName,
 		SerialNumber:  newCard.SerialNumber,
 		ImageUrl:      newCard.ImageUrl,
-		Exists:        newCard.Exists,
 	}, nil)
 }
 
@@ -69,11 +68,21 @@ func (app *application) createCardHandler(w http.ResponseWriter, r *http.Request
 //	@Description	Helps to retrieve a list of all cards
 //	@Tags			cards
 //	@Produce		json
+//	@Param			id	path		uuid	true	"manufacturer id"
 //	@Success		200	{object}	types.SuccessResponse{data=[]data.GetCardResponse}
 //	@Failure		500	{object}	types.ErrorResponse	"Unexpected database error"
-//	@Router			/cards [get]
-func (app *application) getAllCardsHandler(w http.ResponseWriter, _ *http.Request) {
-	cards, err := app.models.Cards.FindAll(&data.Card{})
+//	@Router			/cards/by-manufacturer/{id} [get]
+func (app *application) getAllCardsHandler(w http.ResponseWriter, r *http.Request) {
+	idFromParams := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idFromParams)
+	if err != nil {
+		json.ErrorJSON(w, constants.IncorrectIdErrorMessage, types.HttpError{
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	cards, err := app.models.Cards.FindAll(&data.Card{ManufacturerID: id})
 	if err != nil {
 		json.ErrorJSON(w, constants.DatabaseErrorMessage, common.NewDatabaseError(err))
 		return
@@ -87,7 +96,6 @@ func (app *application) getAllCardsHandler(w http.ResponseWriter, _ *http.Reques
 			CharacterName: card.CharacterName,
 			SerialNumber:  card.SerialNumber,
 			ImageUrl:      card.ImageUrl,
-			Exists:        card.Exists,
 		})
 	}
 
@@ -134,7 +142,6 @@ func (app *application) updateCardHandler(w http.ResponseWriter, r *http.Request
 		CharacterName: payload.CharacterName,
 		SerialNumber:  payload.SerialNumber,
 		ImageUrl:      payload.ImageUrl,
-		Exists:        payload.Exists,
 	}
 
 	if err := app.models.Cards.Update(&data.Card{ID: id}, &updateBody, nil); err != nil {
@@ -187,7 +194,6 @@ func (app *application) getCardByIdHandler(w http.ResponseWriter, r *http.Reques
 		CharacterName: card.CharacterName,
 		SerialNumber:  card.SerialNumber,
 		ImageUrl:      card.ImageUrl,
-		Exists:        card.Exists,
 	}, nil)
 }
 

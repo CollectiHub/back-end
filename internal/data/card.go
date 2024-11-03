@@ -15,9 +15,11 @@ type Card struct {
 	CharacterName *string   `gorm:"type:varchar(64);default:''"`
 	SerialNumber  *string   `gorm:"type:varchar(64);not null"`
 	ImageUrl      *string   `gorm:"type:varchar(256);default:''"`
-	Exists        *bool     `gorm:"type:bool;default:true"`
-	CreatedAt     time.Time `gorm:"not null"`
-	UpdatedAt     time.Time `gorm:"not null"`
+
+	ManufacturerID uuid.UUID
+
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
 }
 
 type CardModel struct {
@@ -164,11 +166,11 @@ func (m CardModel) DeleteOneById(id interface{}, tx *gorm.DB) error {
 }
 
 type CreateCardRequest struct {
-	Rarity        *string `json:"rarity" example:"SSR" validate:"required,max=12"`
-	CharacterName *string `json:"character_name" example:"Hatake Kakashi" validate:"omitempty,len=0|min=2,max=64"`
-	SerialNumber  *string `json:"serial_number" example:"SE-014" validate:"len=0|min=1,max=64"`
-	ImageUrl      *string `json:"image_url" example:"https://example.com/image.jpg" validate:"omitempty,len=0|url"`
-	Exists        *bool   `json:"exists" example:"true" validate:"omitempty"`
+	Rarity         *string   `json:"rarity" example:"SSR" validate:"required,max=12"`
+	CharacterName  *string   `json:"character_name" example:"Hatake Kakashi" validate:"omitempty,len=0|min=2,max=64"`
+	SerialNumber   *string   `json:"serial_number" example:"SE-014" validate:"len=0|min=1,max=64"`
+	ImageUrl       *string   `json:"image_url" example:"https://example.com/image.jpg" validate:"omitempty,len=0|url"`
+	ManufacturerID uuid.UUID `json:"manufacturer_id" example:"550e8400-e29b-41d4-a716-446655440000" validate:"required,uuid4"`
 }
 
 type UpdateCardRequest struct {
@@ -176,7 +178,6 @@ type UpdateCardRequest struct {
 	CharacterName *string `json:"character_name" example:"Hatake Kakashi" validate:"omitempty,min=2,max=64"`
 	SerialNumber  *string `json:"serial_number" example:"SE-014" validate:"omitempty,len=0|min=1,max=64"`
 	ImageUrl      *string `json:"image_url" example:"https://example.com/image.jpg" validate:"omitempty,len=0|url"`
-	Exists        *bool   `json:"exists" example:"true" validate:"boolean"`
 }
 
 type GetCardResponse struct {
@@ -185,7 +186,6 @@ type GetCardResponse struct {
 	CharacterName *string   `json:"character_name" example:"Hatake Kakashi"`
 	SerialNumber  *string   `json:"serial_number" example:"SE-014"`
 	ImageUrl      *string   `json:"image_url" example:"https://example.com/image.jpg"`
-	Exists        *bool     `json:"exists" example:"true"`
 }
 
 type GetOwnedCardResponse struct {
@@ -195,7 +195,6 @@ type GetOwnedCardResponse struct {
 	SerialNumber  *string   `json:"serial_number" example:"SE-014"`
 	ImageUrl      *string   `json:"image_url" example:"https://example.com/image.jpg"`
 	Status        *string   `json:"status" example:"collected"`
-	Exists        *bool     `json:"exists" example:"true"`
 }
 
 type GetCollectionInfoResponse struct {

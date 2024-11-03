@@ -275,45 +275,6 @@ const docTemplate = `{
             }
         },
         "/cards": {
-            "get": {
-                "description": "Helps to retrieve a list of all cards",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cards"
-                ],
-                "summary": "Get all cards",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/types.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/data.GetCardResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "500": {
-                        "description": "Unexpected database error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -553,6 +514,47 @@ const docTemplate = `{
                         "description": "Validation error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected database error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cards/by-manufacturer/{id}": {
+            "get": {
+                "description": "Helps to retrieve a list of all cards",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Get all cards",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/data.GetCardResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "500": {
@@ -1668,6 +1670,7 @@ const docTemplate = `{
         "data.CreateCardRequest": {
             "type": "object",
             "required": [
+                "manufacturer_id",
                 "rarity"
             ],
             "properties": {
@@ -1676,13 +1679,13 @@ const docTemplate = `{
                     "maxLength": 64,
                     "example": "Hatake Kakashi"
                 },
-                "exists": {
-                    "type": "boolean",
-                    "example": true
-                },
                 "image_url": {
                     "type": "string",
                     "example": "https://example.com/image.jpg"
+                },
+                "manufacturer_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "rarity": {
                     "type": "string",
@@ -1744,10 +1747,6 @@ const docTemplate = `{
                 "character_name": {
                     "type": "string",
                     "example": "Hatake Kakashi"
-                },
-                "exists": {
-                    "type": "boolean",
-                    "example": true
                 },
                 "id": {
                     "type": "string",
@@ -1846,10 +1845,6 @@ const docTemplate = `{
                 "character_name": {
                     "type": "string",
                     "example": "Hatake Kakashi"
-                },
-                "exists": {
-                    "type": "boolean",
-                    "example": true
                 },
                 "id": {
                     "type": "string",
@@ -2004,10 +1999,6 @@ const docTemplate = `{
                     "maxLength": 64,
                     "minLength": 2,
                     "example": "Hatake Kakashi"
-                },
-                "exists": {
-                    "type": "boolean",
-                    "example": true
                 },
                 "image_url": {
                     "type": "string",
