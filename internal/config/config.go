@@ -32,6 +32,8 @@ type Config struct {
 	MailerPassword string `mapstructure:"MAIL_PASSWORD"`
 	MailerSmtpHost string `mapstructure:"MAIL_SMTP_HOST"`
 	MailerSmtpPort int    `mapstructure:"MAIL_SMTP_PORT"`
+
+	S3BucketName string `mapstructure:"S3_BUCKET_NAME"`
 }
 
 const EnvDev = "development"

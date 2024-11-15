@@ -6,6 +6,7 @@ import (
 	"kadocore/internal/data"
 	"kadocore/internal/database"
 	"kadocore/internal/mailer"
+	"kadocore/internal/s3client"
 	"kadocore/internal/util/logger"
 	"sync"
 
@@ -15,12 +16,13 @@ import (
 const version = "1.0.0"
 
 type application struct {
-	config *config.Config
-	logger *zerolog.Logger
-	models data.Models
-	mailer *mailer.Mailer
-	oauth  auth.OAuthConfig
-	wg     sync.WaitGroup
+	config   *config.Config
+	logger   *zerolog.Logger
+	models   data.Models
+	mailer   *mailer.Mailer
+	s3client *s3client.S3Client
+	oauth    auth.OAuthConfig
+	wg       sync.WaitGroup
 }
 
 //	@title			KadoCore API
@@ -43,13 +45,15 @@ func main() {
 	db := database.New(*cfg)
 	mailer := mailer.New(*cfg, logger)
 	oauth := auth.NewOAuth(*cfg)
+	s3client := s3client.New()
 
 	app := &application{
-		config: cfg,
-		logger: logger,
-		models: data.NewModels(db, logger),
-		mailer: mailer,
-		oauth:  oauth,
+		config:   cfg,
+		logger:   logger,
+		models:   data.NewModels(db, logger),
+		mailer:   mailer,
+		oauth:    oauth,
+		s3client: s3client,
 	}
 
 	// Call app.serve() to start the server.

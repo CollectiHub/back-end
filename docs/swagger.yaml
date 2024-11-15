@@ -82,6 +82,12 @@ definitions:
         maxLength: 64
         type: string
     type: object
+  data.FileUploadResponse:
+    properties:
+      location:
+        example: https://s3.amazonaws.com/bucketname/filename.jpg
+        type: string
+    type: object
   data.GetCardResponse:
     properties:
       character_name:
@@ -883,6 +889,35 @@ paths:
       summary: Update collection info
       tags:
       - cards
+  /file-upload:
+    post:
+      description: Serves as route to upload file to uploading service (S3)
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.FileUploadResponse'
+              type: object
+        "400":
+          description: parsing/uploading error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload file
+      tags:
+      - file-upload
   /healthcheck:
     get:
       description: Serves as route to check if server is up and running

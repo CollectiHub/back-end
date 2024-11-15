@@ -66,6 +66,9 @@ func (app *application) routes() http.Handler {
 	r.Get("/collection/get-by-rarity", app.authenticate(app.getAllCardsByRarityHandler))
 	r.Get("/collection/search", app.authenticate(app.searchCardsWithTermHandler))
 
+	// File upload
+	r.Post("/file-upload", app.uploadFile)
+
 	router.Mount(fmt.Sprintf("/%s", constants.MainRoute), r)
 
 	return router

@@ -816,6 +816,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/file-upload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Serves as route to upload file to uploading service (S3)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file-upload"
+                ],
+                "summary": "Upload file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/types.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.FileUploadResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "parsing/uploading error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/healthcheck": {
             "get": {
                 "description": "Serves as route to check if server is up and running",
@@ -1738,6 +1789,15 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 64,
                     "example": "SE-014"
+                }
+            }
+        },
+        "data.FileUploadResponse": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "example": "https://s3.amazonaws.com/bucketname/filename.jpg"
                 }
             }
         },
